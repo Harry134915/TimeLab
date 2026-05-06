@@ -15,12 +15,14 @@ public class MainViewModel : INotifyPropertyChanged
 {
     private readonly TaskService _taskService;
     private readonly PomodoroService _pomodoroService;
+    private readonly Action<string>? _onBalloon;
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
-    public MainViewModel(TaskService taskService, PomodoroService pomodoroService)
+    public MainViewModel(TaskService taskService, PomodoroService pomodoroService, Action<string>? onBalloon = null)
     {
         _taskService = taskService;
         _pomodoroService = pomodoroService;
+        _onBalloon = onBalloon;
 
         // 每秒刷新计时显示
         _tick.Tick += (_, _) => UpdateTimerDisplay();
@@ -164,6 +166,7 @@ public class MainViewModel : INotifyPropertyChanged
         NotificationMessage = message;
         IsNotificationVisible = true;
         _notificationDismissSeconds = 0;
+        _onBalloon?.Invoke(message);
     }
 
     private int ParseDuration()
