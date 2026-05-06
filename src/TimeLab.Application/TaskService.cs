@@ -15,13 +15,14 @@ public class TaskService
     }
 
     /// <summary>创建新任务</summary>
-    public async Task<TaskItem> CreateAsync(string title)
+    public async Task<TaskItem> CreateAsync(string title, int plannedSeconds = 0)
     {
         var item = new TaskItem
         {
             Id = Guid.NewGuid(),
             Title = title,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTime.Now,
+            PlannedSeconds = plannedSeconds
         };
 
         await _repository.AddAsync(item);

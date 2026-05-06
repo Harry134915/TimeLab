@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TimeLab.App"
         mc:Ignorable="d"
-        Title="番茄钟" Height="520" Width="860"
+        Title="番茄钟" Height="560" Width="960"
         Icon="/Assets/Idol.jpg"
         Background="#F0F2F5"
         FontFamily="Microsoft YaHei UI"
@@ -16,6 +16,7 @@
     <Window.Resources>
         <local:TaskIdToTitleConverter x:Key="TaskIdConverter"/>
         <local:DurationConverter x:Key="DurationConverter"/>
+        <local:SecondsConverter x:Key="SecondsConverter"/>
 
         <!-- 颜色 -->
         <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
@@ -100,6 +101,59 @@
             </Setter>
         </Style>
 
+        <!-- 下拉框 -->
+        <Style TargetType="ComboBox">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False" ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="White" BorderBrush="{StaticResource BorderBrush}"
+                                                BorderThickness="1" CornerRadius="6"/>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Border IsHitTestVisible="False" Margin="0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="20"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                               Margin="8,4,0,4"
+                                               Text="{Binding SelectionBoxItem, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                    <Path Grid.Column="1" Data="M0,0 L3,3 L6,0"
+                                          Stroke="{StaticResource MutedBrush}"
+                                          StrokeThickness="1.5" Fill="Transparent"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="Popup"
+                                   AllowsTransparency="True"
+                                   Placement="Bottom"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Focusable="False" PopupAnimation="Slide">
+                                <Border Background="White" BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" Margin="0,2,0,0"
+                                        MaxHeight="200">
+                                    <ScrollViewer>
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 卡片容器 -->
         <Style x:Key="CardBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource CardBrush}"/>
@@ -127,11 +181,12 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="12">
+    <Grid>
+        <Grid Margin="12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="5*"/>
             <ColumnDefinition Width="4"/>
-            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="4*"/>
         </Grid.ColumnDefinitions>
 
         <!-- 左侧：任务列表 -->
@@ -151,13 +206,26 @@
                                Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                    <TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
-                             Width="210" VerticalAlignment="Center"/>
-                    <Button Content="添加" Style="{StaticResource PrimaryButtonStyle}"
-                            Command="{Binding AddTaskCommand}"
-                            Margin="10,0,0,0"/>
-                </StackPanel>
+                <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0" Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding NewTaskDuration, UpdateSourceTrigger=PropertyChanged}"
+                             Width="54" VerticalAlignment="Center" Margin="0,0,4,0"
+                             FontSize="12" Padding="4,6"/>
+                    <ComboBox Grid.Column="2" ItemsSource="{Binding DurationUnits}"
+                              SelectedIndex="{Binding DurationUnitIndex}"
+                              Width="60" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
+                              FontSize="12"/>
+                    <Button Grid.Column="3" Content="添加" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding AddTaskCommand}"/>
+                </Grid>
 
                 <Grid Grid.Row="2">
                     <TextBlock Text="暂无任务" FontSize="13"
@@ -199,19 +267,37 @@
                                           Command="{Binding DataContext.CompleteTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
                                           CommandParameter="{Binding Id}"/>
 
-                                <TextBlock Grid.Column="1" Text="{Binding Title}"
-                                           VerticalAlignment="Center" Margin="8,0">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
-                                                    <Setter Property="TextDecorations" Value="Strikethrough"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                            VerticalAlignment="Center" Margin="8,0">
+                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                        <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                                        <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <Border CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
+                                            Background="#FFF3E0" VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding PlannedSeconds}" Value="0">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock VerticalAlignment="Center" FontSize="10"
+                                                   Foreground="#E65100"
+                                                   Text="{Binding PlannedSeconds, Converter={StaticResource SecondsConverter}}"/>
+                                    </Border>
+                                </StackPanel>
 
                                 <Button Grid.Column="2" Content="关联"
                                         Command="{Binding DataContext.SelectTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
@@ -304,11 +390,47 @@
                     <!-- 计时数字面板 -->
                     <Border Background="#F7F8FA" CornerRadius="10" Padding="16,12"
                             HorizontalAlignment="Center" Margin="0,0,0,12">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="#F7F8FA"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOvertime}" Value="True">
+                                        <Setter Property="Background" Value="#FFF5F5"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <TextBlock Text="{Binding ElapsedDisplay}" FontSize="42"
                                    FontFamily="Segoe UI" FontWeight="Light"
-                                   Foreground="{StaticResource TextBrush}"
-                                   HorizontalAlignment="Center"/>
+                                   HorizontalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOvertime}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Border>
+
+                    <!-- 超时提示 -->
+                    <TextBlock Text="时间到！" FontSize="13" FontWeight="Bold"
+                               Foreground="{StaticResource DangerBrush}"
+                               HorizontalAlignment="Center" Margin="0,0,0,8">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOvertime}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
 
                     <!-- 关联任务 -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
@@ -453,5 +575,25 @@
             </Grid>
             </Border>
         </Grid>
+    </Grid>
+
+        <!-- 通知条 -->
+        <Border Background="{StaticResource DangerBrush}" CornerRadius="6"
+                Padding="14,10" HorizontalAlignment="Center"
+                VerticalAlignment="Top" Margin="0,10,0,0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsNotificationVisible}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock Text="{Binding NotificationMessage}" FontSize="14"
+                       Foreground="White" FontWeight="SemiBold"
+                       HorizontalAlignment="Center"/>
+        </Border>
     </Grid>
 </Window>

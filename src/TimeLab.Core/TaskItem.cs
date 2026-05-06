@@ -15,4 +15,6 @@ public class TaskItem
     public DateTime CreatedAt { get; set; }
     /// <summary>完成时间，未完成时为 null</summary>
     public DateTime? CompletedAt { get; set; }
+    /// <summary>计划时长（秒），0 表示不限时</summary>
+    public int PlannedSeconds { get; set; }
 }

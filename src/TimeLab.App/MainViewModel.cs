@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Media;
 using System.Windows.Input;
 using System.Windows.Threading;
 using TimeLab.Application;
@@ -49,6 +50,48 @@ public class MainViewModel : INotifyPropertyChanged
         get => _newTaskTitle;
         set { _newTaskTitle = value; OnPropertyChanged(nameof(NewTaskTitle)); }
     }
+
+    /// <summary>新任务时长数值</summary>
+    private string _newTaskDuration = string.Empty;
+    public string NewTaskDuration
+    {
+        get => _newTaskDuration;
+        set { _newTaskDuration = value; OnPropertyChanged(nameof(NewTaskDuration)); }
+    }
+
+    /// <summary>时长单位索引：0=秒, 1=分钟, 2=时</summary>
+    public int DurationUnitIndex { get; set; }
+
+    /// <summary>时长单位列表</summary>
+    public List<string> DurationUnits { get; } = ["秒", "分钟", "时"];
+
+    /// <summary>是否已超时</summary>
+    private bool _isOvertime;
+    public bool IsOvertime
+    {
+        get => _isOvertime;
+        set { _isOvertime = value; OnPropertyChanged(nameof(IsOvertime)); }
+    }
+
+    private bool _alarmPlayed;
+
+    /// <summary>通知消息内容</summary>
+    private string _notificationMessage = string.Empty;
+    public string NotificationMessage
+    {
+        get => _notificationMessage;
+        set { _notificationMessage = value; OnPropertyChanged(nameof(NotificationMessage)); }
+    }
+
+    /// <summary>通知条是否可见</summary>
+    private bool _isNotificationVisible;
+    public bool IsNotificationVisible
+    {
+        get => _isNotificationVisible;
+        set { _isNotificationVisible = value; OnPropertyChanged(nameof(IsNotificationVisible)); }
+    }
+
+    private int _notificationDismissSeconds;
 
     /// <summary>计时器时间显示 HH:MM:SS</summary>
     private string _elapsedDisplay = "00:00";
@@ -109,9 +152,31 @@ public class MainViewModel : INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(NewTaskTitle))
             return;
 
-        var item = await _taskService.CreateAsync(NewTaskTitle);
+        var seconds = ParseDuration();
+        var item = await _taskService.CreateAsync(NewTaskTitle, seconds);
         Tasks.Add(item);
         NewTaskTitle = string.Empty;
+        NewTaskDuration = string.Empty;
+    }
+
+    private void ShowNotification(string message)
+    {
+        NotificationMessage = message;
+        IsNotificationVisible = true;
+        _notificationDismissSeconds = 0;
+    }
+
+    private int ParseDuration()
+    {
+        if (string.IsNullOrWhiteSpace(NewTaskDuration) || !int.TryParse(NewTaskDuration, out var value))
+            return 0;
+
+        return DurationUnitIndex switch
+        {
+            2 => value * 3600,
+            1 => value * 60,
+            _ => value
+        };
     }
 
     /// <summary>将指定任务标记为完成</summary>
@@ -160,6 +225,8 @@ public class MainViewModel : INotifyPropertyChanged
     private Task StartTimerAsync()
     {
         _pomodoroService.StartAsync(SelectedTaskId);
+        _alarmPlayed = false;
+        IsOvertime = false;
         _tick.Stop();
         _tick.Start();
         UpdateTimerDisplay();
@@ -189,11 +256,13 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task ResetTimerAsync()
     {
         _tick.Stop();
+        _alarmPlayed = false;
+        IsOvertime = false;
         await _pomodoroService.ResetAsync();
         UpdateTimerDisplay();
     }
 
-    /// <summary>刷新计时器显示：状态文字和实时耗时</summary>
+    /// <summary>刷新计时器显示：状态文字、实时耗时、超时检测</summary>
     private void UpdateTimerDisplay()
     {
         var state = _pomodoroService.CurrentState;
@@ -211,6 +280,32 @@ public class MainViewModel : INotifyPropertyChanged
             elapsed += DateTime.Now - state.StartTime.Value;
 
         ElapsedDisplay = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+
+        // 超时检测
+        if (state.Status == TimerStatus.Running && SelectedTaskId.HasValue && !_alarmPlayed)
+        {
+            var task = Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value);
+            if (task is not null && task.PlannedSeconds > 0
+                && elapsed.TotalSeconds >= task.PlannedSeconds)
+            {
+                IsOvertime = true;
+                _alarmPlayed = true;
+                ShowNotification($"时间到！“{task.Title}” 已完成 {task.PlannedSeconds / 60}:{task.PlannedSeconds % 60:D2}");
+                SystemSounds.Beep.Play();
+            }
+        }
+
+        // 通知条自动消失（约 4 秒，250ms × 16）
+        if (IsNotificationVisible)
+        {
+            _notificationDismissSeconds++;
+            if (_notificationDismissSeconds >= 16)
+            {
+                IsNotificationVisible = false;
+                NotificationMessage = string.Empty;
+                _notificationDismissSeconds = 0;
+            }
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
