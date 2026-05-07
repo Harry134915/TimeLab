@@ -18,6 +18,9 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly Action<string>? _onBalloon;
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
+    // 用于控制通知消息自动消失的计时器
+    private DispatcherTimer? _notificationTimer;
+
     public MainViewModel(TaskService taskService, PomodoroService pomodoroService, Action<string>? onBalloon = null)
     {
         _taskService = taskService;
@@ -93,8 +96,6 @@ public class MainViewModel : INotifyPropertyChanged
         set { _isNotificationVisible = value; OnPropertyChanged(nameof(IsNotificationVisible)); }
     }
 
-    private int _notificationDismissSeconds;
-
     /// <summary>计时器时间显示 HH:MM:SS</summary>
     private string _elapsedDisplay = "00:00";
     public string ElapsedDisplay
@@ -165,8 +166,22 @@ public class MainViewModel : INotifyPropertyChanged
     {
         NotificationMessage = message;
         IsNotificationVisible = true;
-        _notificationDismissSeconds = 0;
+
         _onBalloon?.Invoke(message);
+
+        //防止连续通知
+        _notificationTimer?.Stop();
+
+        _notificationTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+
+        _notificationTimer.Tick += (_, _) =>
+        {
+            IsNotificationVisible = false;
+            NotificationMessage = string.Empty;
+            _notificationTimer?.Stop();
+        };
+
+        _notificationTimer?.Start();
     }
 
     private int ParseDuration()
@@ -293,20 +308,8 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 IsOvertime = true;
                 _alarmPlayed = true;
-                ShowNotification($"时间到！“{task.Title}” 已完成 {task.PlannedSeconds / 60}:{task.PlannedSeconds % 60:D2}");
+                ShowNotification($"时间到！“{task.Title}” 任务已完成！");
                 SystemSounds.Beep.Play();
-            }
-        }
-
-        // 通知条自动消失（约 4 秒，250ms × 16）
-        if (IsNotificationVisible)
-        {
-            _notificationDismissSeconds++;
-            if (_notificationDismissSeconds >= 16)
-            {
-                IsNotificationVisible = false;
-                NotificationMessage = string.Empty;
-                _notificationDismissSeconds = 0;
             }
         }
     }
