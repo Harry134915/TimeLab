@@ -16,16 +16,18 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly TaskService _taskService;
     private readonly PomodoroService _pomodoroService;
     private readonly Action<string>? _onBalloon;
+    private readonly Action? _onToggleDark;
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
-    // 用于控制通知消息自动消失的计时器
     private DispatcherTimer? _notificationTimer;
 
-    public MainViewModel(TaskService taskService, PomodoroService pomodoroService, Action<string>? onBalloon = null)
+    public MainViewModel(TaskService taskService, PomodoroService pomodoroService,
+                         Action<string>? onBalloon = null, Action? onToggleDark = null)
     {
         _taskService = taskService;
         _pomodoroService = pomodoroService;
         _onBalloon = onBalloon;
+        _onToggleDark = onToggleDark;
 
         // 每秒刷新计时显示
         _tick.Tick += (_, _) => UpdateTimerDisplay();
@@ -40,6 +42,7 @@ public class MainViewModel : INotifyPropertyChanged
         PauseTimerCommand = new RelayCommand(async _ => await PauseTimerAsync());
         StopTimerCommand = new RelayCommand(async _ => await StopTimerAsync());
         ResetTimerCommand = new RelayCommand(async _ => await ResetTimerAsync());
+        ToggleDarkModeCommand = new RelayCommand(_ => ToggleDarkMode());
     }
 
     /// <summary>任务列表</summary>
@@ -136,6 +139,18 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand PauseTimerCommand { get; }
     public ICommand StopTimerCommand { get; }
     public ICommand ResetTimerCommand { get; }
+    public ICommand ToggleDarkModeCommand { get; }
+
+    /// <summary>是否深色模式</summary>
+    private bool _isDarkMode;
+    public bool IsDarkMode
+    {
+        get => _isDarkMode;
+        set { _isDarkMode = value; OnPropertyChanged(nameof(IsDarkMode)); OnPropertyChanged(nameof(DarkToggleText)); }
+    }
+
+    /// <summary>深色切换按钮文字</summary>
+    public string DarkToggleText => _isDarkMode ? "浅色" : "深色";
 
     /// <summary>启动时加载已保存的任务和专注记录</summary>
     public async Task LoadAsync()
@@ -234,6 +249,12 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>清除关联任务</summary>
+    private void ToggleDarkMode()
+    {
+        IsDarkMode = !IsDarkMode;
+        _onToggleDark?.Invoke();
+    }
+
     private void ClearSelectedTask()
     {
         SelectedTaskId = null;
