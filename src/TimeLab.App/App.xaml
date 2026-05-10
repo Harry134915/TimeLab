@@ -4,16 +4,22 @@
              xmlns:local="clr-namespace:TimeLab.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#4A6CF7"/>
-        <SolidColorBrush x:Key="StopBrush" Color="#E17055"/>
-        <SolidColorBrush x:Key="SuccessBrush" Color="#27AE60"/>
-        <SolidColorBrush x:Key="DangerBrush" Color="#E74C3C"/>
-        <SolidColorBrush x:Key="DangerHoverBrush" Color="#D63031"/>
-        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextBrush" Color="#2D3436"/>
-        <SolidColorBrush x:Key="MutedBrush" Color="#B2BEC3"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#E8ECF0"/>
-        <SolidColorBrush x:Key="TimerPanelBrush" Color="#F7F8FA"/>
-        <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#3B5DE7"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/GorgeousSwitch.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+                      
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#4A6CF7"/>
+            <SolidColorBrush x:Key="StopBrush" Color="#E17055"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#27AE60"/>
+            <SolidColorBrush x:Key="DangerBrush" Color="#E74C3C"/>
+            <SolidColorBrush x:Key="DangerHoverBrush" Color="#D63031"/>
+            <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="TextBrush" Color="#2D3436"/>
+            <SolidColorBrush x:Key="MutedBrush" Color="#B2BEC3"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#E8ECF0"/>
+            <SolidColorBrush x:Key="TimerPanelBrush" Color="#F7F8FA"/>
+            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#3B5DE7"/>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

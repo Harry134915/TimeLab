@@ -42,7 +42,6 @@ public class MainViewModel : INotifyPropertyChanged
         PauseTimerCommand = new RelayCommand(async _ => await PauseTimerAsync());
         StopTimerCommand = new RelayCommand(async _ => await StopTimerAsync());
         ResetTimerCommand = new RelayCommand(async _ => await ResetTimerAsync());
-        ToggleDarkModeCommand = new RelayCommand(_ => ToggleDarkMode());
     }
 
     /// <summary>任务列表</summary>
@@ -139,18 +138,23 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand PauseTimerCommand { get; }
     public ICommand StopTimerCommand { get; }
     public ICommand ResetTimerCommand { get; }
-    public ICommand ToggleDarkModeCommand { get; }
-
     /// <summary>是否深色模式</summary>
     private bool _isDarkMode;
     public bool IsDarkMode
     {
         get => _isDarkMode;
-        set { _isDarkMode = value; OnPropertyChanged(nameof(IsDarkMode)); OnPropertyChanged(nameof(DarkToggleText)); }
+        set
+        {
+            if (_isDarkMode == value) return;
+            _isDarkMode = value;
+            _onToggleDark?.Invoke();
+            OnPropertyChanged(nameof(IsDarkMode));
+            OnPropertyChanged(nameof(DarkToggleText));
+        }
     }
 
     /// <summary>深色切换按钮文字</summary>
-    public string DarkToggleText => _isDarkMode ? "浅色" : "深色";
+    public string DarkToggleText => _isDarkMode ? "深色" : "浅色";
 
     /// <summary>启动时加载已保存的任务和专注记录</summary>
     public async Task LoadAsync()
@@ -246,13 +250,6 @@ public class MainViewModel : INotifyPropertyChanged
     private void SelectTask(Guid id)
     {
         SelectedTaskId = id;
-    }
-
-    /// <summary>清除关联任务</summary>
-    private void ToggleDarkMode()
-    {
-        IsDarkMode = !IsDarkMode;
-        _onToggleDark?.Invoke();
     }
 
     private void ClearSelectedTask()

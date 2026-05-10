@@ -338,11 +338,10 @@
                             <TextBlock Text="番茄钟" FontSize="14" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <Button HorizontalAlignment="Right" VerticalAlignment="Center"
-                                Content="{Binding DarkToggleText}"
-                                Style="{StaticResource LinkButtonStyle}"
-                                FontSize="11" Padding="4,2"
-                                Command="{Binding ToggleDarkModeCommand}"/>
+                        <CheckBox HorizontalAlignment="Right" VerticalAlignment="Center"
+                                IsChecked="{Binding IsDarkMode}"
+                                Style="{StaticResource GorgeousSwitch}"
+                                FontSize="11" Padding="4,2"/>
                     </Grid>
 
                     <!-- 状态指示器：圆点 + 文字 -->
