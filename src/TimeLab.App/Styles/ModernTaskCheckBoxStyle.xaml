@@ -33,7 +33,7 @@
                                 VerticalAlignment="Center"
                                 RenderTransformOrigin="0.5,0.5">
 
-                            <!-- 缩放 -->
+                            <!-- Circle 缩放 -->
 
                             <Border.RenderTransform>
 
@@ -56,7 +56,20 @@
                                       Opacity="0"
                                       Stretch="None"
                                       HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"/>
+                                      VerticalAlignment="Center"
+                                      RenderTransformOrigin="0.5,0.5">
+
+                                    <!-- 勾缩放 -->
+
+                                    <Path.RenderTransform>
+
+                                        <ScaleTransform x:Name="CheckMarkScale"
+                                                        ScaleX="0.6"
+                                                        ScaleY="0.6"/>
+
+                                    </Path.RenderTransform>
+
+                                </Path>
 
                             </Grid>
 
@@ -76,13 +89,29 @@
                                 Storyboard.TargetName="ScaleTransform"
                                 Storyboard.TargetProperty="ScaleX"
                                 To="1.08"
-                                Duration="0:0:0.12"/>
+                                Duration="0:0:0.12">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <CubicEase EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
 
                             <DoubleAnimation
                                 Storyboard.TargetName="ScaleTransform"
                                 Storyboard.TargetProperty="ScaleY"
                                 To="1.08"
-                                Duration="0:0:0.12"/>
+                                Duration="0:0:0.12">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <CubicEase EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
 
                         </Storyboard>
 
@@ -94,23 +123,124 @@
                                 Storyboard.TargetName="ScaleTransform"
                                 Storyboard.TargetProperty="ScaleX"
                                 To="1"
-                                Duration="0:0:0.12"/>
+                                Duration="0:0:0.12">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <CubicEase EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
 
                             <DoubleAnimation
                                 Storyboard.TargetName="ScaleTransform"
                                 Storyboard.TargetProperty="ScaleY"
                                 To="1"
+                                Duration="0:0:0.12">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <CubicEase EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
+
+                        </Storyboard>
+
+                        <!-- 勾选动画 -->
+
+                        <Storyboard x:Key="CheckedAnimation">
+
+                            <!-- Circle 弹一下 -->
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="ScaleTransform"
+                                Storyboard.TargetProperty="ScaleX"
+                                From="1"
+                                To="1.12"
+                                Duration="0:0:0.10"
+                                AutoReverse="True">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <BackEase Amplitude="0.35"
+                                              EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="ScaleTransform"
+                                Storyboard.TargetProperty="ScaleY"
+                                From="1"
+                                To="1.12"
+                                Duration="0:0:0.10"
+                                AutoReverse="True">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <BackEase Amplitude="0.35"
+                                              EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
+
+                            <!-- 勾淡入 -->
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="CheckMark"
+                                Storyboard.TargetProperty="Opacity"
+                                From="0"
+                                To="1"
                                 Duration="0:0:0.12"/>
+
+                            <!-- 勾缩放 -->
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="CheckMarkScale"
+                                Storyboard.TargetProperty="ScaleX"
+                                From="0.6"
+                                To="1"
+                                Duration="0:0:0.14">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <BackEase Amplitude="0.4"
+                                              EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="CheckMarkScale"
+                                Storyboard.TargetProperty="ScaleY"
+                                From="0.6"
+                                To="1"
+                                Duration="0:0:0.14">
+
+                                <DoubleAnimation.EasingFunction>
+
+                                    <BackEase Amplitude="0.4"
+                                              EasingMode="EaseOut"/>
+
+                                </DoubleAnimation.EasingFunction>
+
+                            </DoubleAnimation>
 
                         </Storyboard>
 
                     </ControlTemplate.Resources>
 
-                    <!-- 所有 Trigger 合并 -->
+                    <!-- Trigger -->
 
                     <ControlTemplate.Triggers>
 
-                        <!-- Hover 状态 -->
+                        <!-- Hover -->
 
                         <Trigger Property="IsMouseOver"
                                  Value="True">
@@ -125,7 +255,7 @@
 
                         </Trigger>
 
-                        <!-- Checked 状态 -->
+                        <!-- Checked -->
 
                         <Trigger Property="IsChecked"
                                  Value="True">
@@ -138,13 +268,9 @@
                                     Property="BorderBrush"
                                     Value="#22C55E"/>
 
-                            <Setter TargetName="CheckMark"
-                                    Property="Opacity"
-                                    Value="1"/>
-
                         </Trigger>
 
-                        <!-- Disabled 状态 -->
+                        <!-- Disabled -->
 
                         <Trigger Property="IsEnabled"
                                  Value="False">
@@ -169,6 +295,15 @@
 
                             <BeginStoryboard
                                 Storyboard="{StaticResource HoverLeaveAnimation}"/>
+
+                        </EventTrigger>
+
+                        <!-- 勾选动画 -->
+
+                        <EventTrigger RoutedEvent="CheckBox.Checked">
+
+                            <BeginStoryboard
+                                Storyboard="{StaticResource CheckedAnimation}"/>
 
                         </EventTrigger>
 
