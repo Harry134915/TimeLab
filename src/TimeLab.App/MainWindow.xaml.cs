@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using WpfColor = System.Windows.Media.Color;
 using WpfColorConverter = System.Windows.Media.ColorConverter;
 using TimeLab.Application;
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
 {
     private readonly Forms.NotifyIcon _notifyIcon;
     private bool _isDark;
+    private DispatcherTimer? _fadeTimer;
 
     private static readonly (string key, string light, string dark)[] BgBrushes =
     [
@@ -31,7 +33,7 @@ public partial class MainWindow : Window
         var taskService = new TaskService(taskRepo);
         var pomodoroService = new PomodoroService(sessionRepo);
 
-        var viewModel = new MainViewModel(taskService, pomodoroService, ShowBalloon, ToggleDarkMode);
+        var viewModel = new MainViewModel(taskService, pomodoroService, ShowBalloon, onToggleDark: ToggleDarkMode);
         DataContext = viewModel;
 
         _notifyIcon = new Forms.NotifyIcon
@@ -59,19 +61,50 @@ public partial class MainWindow : Window
     private void ToggleDarkMode()
     {
         _isDark = !_isDark;
-        Background = _isDark
-            ? new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString("#1E1E2E")!)
-            : new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString("#F0F2F5")!);
-        ApplyBackgroundBrushes();
+        _fadeTimer?.Stop();
+
+        var resources = System.Windows.Application.Current.Resources;
+        var steps = 16;
+        var stepMs = 25; // 16 × 25 = 400ms
+        var current = 0;
+
+        // 起点
+        var winFrom = ((SolidColorBrush)Background).Color;
+        var winTo = ParseColor(_isDark ? "#1E1E2E" : "#F0F2F5");
+
+        var transitions = new (WpfColor from, WpfColor to, string key)[BgBrushes.Length];
+        for (int i = 0; i < BgBrushes.Length; i++)
+        {
+            var (key, light, dark) = BgBrushes[i];
+            transitions[i] = (
+                ((SolidColorBrush)resources[key]).Color,
+                ParseColor(_isDark ? dark : light),
+                key);
+        }
+
+        _fadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(stepMs) };
+        _fadeTimer.Tick += (_, _) =>
+        {
+            current++;
+            var t = Math.Min((double)current / steps, 1.0);
+
+            Background = new SolidColorBrush(Lerp(winFrom, winTo, t));
+
+            foreach (var (from, to, key) in transitions)
+                resources[key] = new SolidColorBrush(Lerp(from, to, t));
+
+            if (current >= steps)
+                _fadeTimer?.Stop();
+        };
+        _fadeTimer.Start();
     }
 
-    private void ApplyBackgroundBrushes()
-    {
-        var resources = System.Windows.Application.Current.Resources;
-        foreach (var (key, light, dark) in BgBrushes)
-        {
-            resources[key] = new SolidColorBrush(
-                (WpfColor)WpfColorConverter.ConvertFromString(_isDark ? dark : light)!);
-        }
-    }
+    private static WpfColor Lerp(WpfColor a, WpfColor b, double t) =>
+        WpfColor.FromRgb(
+            (byte)(a.R + (b.R - a.R) * t),
+            (byte)(a.G + (b.G - a.G) * t),
+            (byte)(a.B + (b.B - a.B) * t));
+
+    private static WpfColor ParseColor(string hex) =>
+        (WpfColor)WpfColorConverter.ConvertFromString(hex)!;
 }
