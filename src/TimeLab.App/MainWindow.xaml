@@ -11,7 +11,7 @@
         FontFamily="Microsoft YaHei UI"
         FontSize="14"
         WindowStartupLocation="CenterScreen">
-        
+
 
     <Window.Resources>
         <local:TaskIdToTitleConverter x:Key="TaskIdConverter"/>
@@ -170,409 +170,412 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+
     </Window.Resources>
 
     <Grid>
         <Grid Margin="12">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="5*"/>
-            <ColumnDefinition Width="4"/>
-            <ColumnDefinition Width="4*"/>
-        </Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="4*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- 左侧：任务列表 -->
-        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- 标题栏 -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Border Width="3" CornerRadius="2" Background="{DynamicResource SuccessBrush}"
-                            VerticalAlignment="Stretch" Margin="0,0,8,0"/>
-                    <TextBlock Text="任务列表" FontSize="14" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                </StackPanel>
-
-                <Grid Grid.Row="1" Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBox Grid.Column="0" Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
-                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox Grid.Column="1" Text="{Binding NewTaskDuration, UpdateSourceTrigger=PropertyChanged}"
-                             Width="54" VerticalAlignment="Center" Margin="0,0,4,0"
-                             FontSize="12" Padding="4,6"/>
-                    <ComboBox Grid.Column="2" ItemsSource="{Binding DurationUnits}"
-                              SelectedIndex="{Binding DurationUnitIndex}"
-                              Width="60" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
-                              FontSize="12"/>
-                    <Button Grid.Column="3" Content="添加" Style="{StaticResource PrimaryButtonStyle}"
-                            Command="{Binding AddTaskCommand}"/>
-                </Grid>
-
-                <Grid Grid.Row="2">
-                    <TextBlock Text="暂无任务" FontSize="13"
-                               Foreground="{DynamicResource MutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Tasks.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <ListView ItemsSource="{Binding Tasks}">
-                        <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.Style>
-                                    <Style TargetType="Grid">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                <Setter Property="Opacity" Value="0.45"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Grid.Style>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <CheckBox Grid.Column="0" IsChecked="{Binding IsCompleted}"
-                                          VerticalAlignment="Center"
-                                          Command="{Binding DataContext.CompleteTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
-                                          CommandParameter="{Binding Id}"/>
-
-                                <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                            VerticalAlignment="Center" Margin="8,0">
-                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-                                                        <Setter Property="TextDecorations" Value="Strikethrough"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <Border CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
-                                            Background="#FFF3E0" VerticalAlignment="Center">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Visible"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding PlannedSeconds}" Value="0">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock VerticalAlignment="Center" FontSize="10"
-                                                   Foreground="#E65100"
-                                                   Text="{Binding PlannedSeconds, Converter={StaticResource SecondsConverter}}"/>
-                                    </Border>
-                                </StackPanel>
-
-                                <Button Grid.Column="2" Content="关联"
-                                        Command="{Binding DataContext.SelectTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
-                                        CommandParameter="{Binding Id}">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource LinkButtonStyle}">
-                                            <Setter Property="FontSize" Value="12"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-
-                                <Button Grid.Column="3" Content="删除"
-                                        Style="{StaticResource DangerTextButtonStyle}"
-                                        Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
-                                        CommandParameter="{Binding Id}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </Grid>
-        </Grid>
-        </Border>
-
-        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
-                      Background="Transparent"/>
-
-        <!-- 右侧：番茄钟 + Session Log -->
-        <Grid Grid.Column="2">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <!-- 番茄钟卡片 -->
-            <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,10">
-                <StackPanel>
-                    <!-- 标题栏 -->
-                    <Grid Margin="0,0,0,10">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Width="3" CornerRadius="2" Background="{DynamicResource StopBrush}"
-                                    VerticalAlignment="Stretch" Margin="0,0,8,0"/>
-                            <TextBlock Text="番茄钟" FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <CheckBox HorizontalAlignment="Right" VerticalAlignment="Center"
-                                IsChecked="{Binding IsDarkMode}"
-                                Style="{StaticResource GorgeousSwitch}"
-                                FontSize="11" Padding="4,2"/>
-                    </Grid>
-
-                    <!-- 状态指示器：圆点 + 文字 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
-                        <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="{DynamicResource MutedBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding StatusText}" Value="运行中">
-                                            <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding StatusText}" Value="已暂停">
-                                            <Setter Property="Background" Value="#FDCB6E"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding StatusText}" Value="已停止">
-                                            <Setter Property="Background" Value="{DynamicResource StopBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                        <TextBlock Text="{Binding StatusText}" FontSize="14">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding StatusText}" Value="运行中">
-                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding StatusText}" Value="已暂停">
-                                            <Setter Property="Foreground" Value="#B8860B"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding StatusText}" Value="已停止">
-                                            <Setter Property="Foreground" Value="{DynamicResource StopBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-
-                    <!-- 计时数字面板 -->
-                    <Border Background="{DynamicResource TimerPanelBrush}" CornerRadius="10" Padding="16,12"
-                            HorizontalAlignment="Center" Margin="0,0,0,12">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="#F7F8FA"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsOvertime}" Value="True">
-                                        <Setter Property="Background" Value="#FFF5F5"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Text="{Binding ElapsedDisplay}" FontSize="42"
-                                   FontFamily="Segoe UI" FontWeight="Light"
-                                   HorizontalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsOvertime}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Border>
-
-                    <!-- 超时提示 -->
-                    <TextBlock Text="时间到！" FontSize="13" FontWeight="Bold"
-                               Foreground="{DynamicResource DangerBrush}"
-                               HorizontalAlignment="Center" Margin="0,0,0,8">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsOvertime}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-
-                    <!-- 关联任务 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
-                        <TextBlock Text="关联：" Foreground="{DynamicResource MutedBrush}"
-                                   VerticalAlignment="Center" FontSize="12"/>
-                        <TextBlock Text="{Binding SelectedTaskTitle}" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"
-                                   Margin="4,0" FontSize="12"/>
-                        <Button Content="清除" Style="{StaticResource LinkButtonStyle}"
-                                Command="{Binding ClearSelectedTaskCommand}"
-                                FontSize="11" Padding="6,2"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Content="开始" Style="{StaticResource PrimaryButtonStyle}"
-                                Command="{Binding StartTimerCommand}"
-                                Width="66" Height="34" Margin="0,0,6,0"/>
-                        <Button Content="暂停" Style="{StaticResource SecondaryButtonStyle}"
-                                Command="{Binding PauseTimerCommand}"
-                                Width="66" Height="34" Margin="0,0,6,0"/>
-                        <Button Content="停止" Style="{StaticResource StopButtonStyle}"
-                                Command="{Binding StopTimerCommand}"
-                                Width="66" Height="34" Margin="0,0,6,0"/>
-                        <Button Content="清除" Style="{StaticResource LinkButtonStyle}"
-                                Command="{Binding ResetTimerCommand}"
-                                Width="66" Height="34"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- Session Log 卡片 -->
-            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+            <!-- 左侧：任务列表 -->
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
                     <!-- 标题栏 -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
-                        <Border Width="3" CornerRadius="2" Background="{DynamicResource PrimaryBrush}"
-                                VerticalAlignment="Stretch" Margin="0,0,8,0"/>
-                        <TextBlock Text="专注记录" FontSize="14" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Border Width="3" CornerRadius="2" Background="{DynamicResource SuccessBrush}"
+                            VerticalAlignment="Stretch" Margin="0,0,8,0"/>
+                        <TextBlock Text="任务列表" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <Grid Grid.Row="1">
-                        <TextBlock Text="暂无记录" FontSize="13"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox Grid.Column="0" Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding NewTaskDuration, UpdateSourceTrigger=PropertyChanged}"
+                             Width="54" VerticalAlignment="Center" Margin="0,0,4,0"
+                             FontSize="12" Padding="4,6"/>
+                        <ComboBox Grid.Column="2" ItemsSource="{Binding DurationUnits}"
+                              SelectedIndex="{Binding DurationUnitIndex}"
+                              Width="60" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
+                              FontSize="12"/>
+                        <Button Grid.Column="3" Content="添加" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding AddTaskCommand}"/>
+                    </Grid>
+
+                    <Grid Grid.Row="2">
+                        <TextBlock Text="暂无任务" FontSize="13"
+                               Foreground="{DynamicResource MutedBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Sessions.Count}" Value="0">
+                                        <DataTrigger Binding="{Binding Tasks.Count}" Value="0">
                                             <Setter Property="Visibility" Value="Visible"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <ListView ItemsSource="{Binding Sessions}">
+                        <ListView ItemsSource="{Binding Tasks}" d:ItemsSource="{d:SampleData ItemCount=5}">
                             <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="3"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- 左侧色条：关联任务=蓝色，无关联=灰色 -->
-                                    <Border Grid.Column="0" Width="3" CornerRadius="2"
-                                            VerticalAlignment="Stretch" Margin="0,2,8,2">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding TaskId}" Value="{x:Null}">
-                                                        <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                        <Setter Property="Opacity" Value="0.45"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Border.Style>
-                                    </Border>
+                                        </Grid.Style>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
-                                        <!-- 时长：主信息 -->
-                                        <TextBlock Text="{Binding Duration, Converter={StaticResource DurationConverter}}"
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsCompleted}"
+                                          Style="{StaticResource ModernTaskCheckBoxStyle}"
+                                          VerticalAlignment="Center"
+                                          Command="{Binding DataContext.CompleteTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                          CommandParameter="{Binding Id}"/>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                            VerticalAlignment="Center" Margin="8,0">
+                                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <Border CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
+                                            Background="#FFF3E0" VerticalAlignment="Center">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding PlannedSeconds}" Value="0">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock VerticalAlignment="Center" FontSize="10"
+                                                   Foreground="#E65100"
+                                                   Text="{Binding PlannedSeconds, Converter={StaticResource SecondsConverter}}"/>
+                                            </Border>
+                                        </StackPanel>
+
+                                        <Button Grid.Column="2" Content="关联"
+                                        Command="{Binding DataContext.SelectTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                        CommandParameter="{Binding Id}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource LinkButtonStyle}">
+                                                    <Setter Property="FontSize" Value="12"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
+                                        <Button Grid.Column="3" Content="删除"
+                                        Style="{StaticResource DangerTextButtonStyle}"
+                                        Command="{Binding DataContext.DeleteTaskCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                        CommandParameter="{Binding Id}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                      Background="Transparent"/>
+
+            <!-- 右侧：番茄钟 + Session Log -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 番茄钟卡片 -->
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <!-- 标题栏 -->
+                        <Grid Margin="0,0,0,10">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="3" CornerRadius="2" Background="{DynamicResource StopBrush}"
+                                    VerticalAlignment="Stretch" Margin="0,0,8,0"/>
+                                <TextBlock Text="番茄钟" FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <CheckBox HorizontalAlignment="Right" VerticalAlignment="Center"
+                                IsChecked="{Binding IsDarkMode}"
+                                Style="{StaticResource GorgeousSwitch}"
+                                FontSize="11" Padding="4,2"/>
+                        </Grid>
+
+                        <!-- 状态指示器：圆点 + 文字 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center" Margin="0,0,6,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource MutedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatusText}" Value="运行中">
+                                                <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusText}" Value="已暂停">
+                                                <Setter Property="Background" Value="#FDCB6E"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusText}" Value="已停止">
+                                                <Setter Property="Background" Value="{DynamicResource StopBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <TextBlock Text="{Binding StatusText}" FontSize="14">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatusText}" Value="运行中">
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusText}" Value="已暂停">
+                                                <Setter Property="Foreground" Value="#B8860B"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusText}" Value="已停止">
+                                                <Setter Property="Foreground" Value="{DynamicResource StopBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- 计时数字面板 -->
+                        <Border Background="{DynamicResource TimerPanelBrush}" CornerRadius="10" Padding="16,12"
+                            HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#F7F8FA"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOvertime}" Value="True">
+                                            <Setter Property="Background" Value="#FFF5F5"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding ElapsedDisplay}" FontSize="42"
+                                   FontFamily="Segoe UI" FontWeight="Light"
+                                   HorizontalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsOvertime}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+
+                        <!-- 超时提示 -->
+                        <TextBlock Text="时间到！" FontSize="13" FontWeight="Bold"
+                               Foreground="{DynamicResource DangerBrush}"
+                               HorizontalAlignment="Center" Margin="0,0,0,8">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOvertime}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- 关联任务 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
+                            <TextBlock Text="关联：" Foreground="{DynamicResource MutedBrush}"
+                                   VerticalAlignment="Center" FontSize="12"/>
+                            <TextBlock Text="{Binding SelectedTaskTitle}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"
+                                   Margin="4,0" FontSize="12"/>
+                            <Button Content="清除" Style="{StaticResource LinkButtonStyle}"
+                                Command="{Binding ClearSelectedTaskCommand}"
+                                FontSize="11" Padding="6,2"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="开始" Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding StartTimerCommand}"
+                                Width="66" Height="34" Margin="0,0,6,0"/>
+                            <Button Content="暂停" Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding PauseTimerCommand}"
+                                Width="66" Height="34" Margin="0,0,6,0"/>
+                            <Button Content="停止" Style="{StaticResource StopButtonStyle}"
+                                Command="{Binding StopTimerCommand}"
+                                Width="66" Height="34" Margin="0,0,6,0"/>
+                            <Button Content="清除" Style="{StaticResource LinkButtonStyle}"
+                                Command="{Binding ResetTimerCommand}"
+                                Width="66" Height="34"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Session Log 卡片 -->
+                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- 标题栏 -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                            <Border Width="3" CornerRadius="2" Background="{DynamicResource PrimaryBrush}"
+                                VerticalAlignment="Stretch" Margin="0,0,8,0"/>
+                            <TextBlock Text="专注记录" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Grid Grid.Row="1">
+                            <TextBlock Text="暂无记录" FontSize="13"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Sessions.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <ListView ItemsSource="{Binding Sessions}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="3"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- 左侧色条：关联任务=蓝色，无关联=灰色 -->
+                                            <Border Grid.Column="0" Width="3" CornerRadius="2"
+                                            VerticalAlignment="Stretch" Margin="0,2,8,2">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding TaskId}" Value="{x:Null}">
+                                                                <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                <!-- 时长：主信息 -->
+                                                <TextBlock Text="{Binding Duration, Converter={StaticResource DurationConverter}}"
                                                    FontSize="14" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"/>
-                                        <!-- 时间段：副信息 -->
-                                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}">
-                                            <TextBlock.Text>
-                                                <MultiBinding StringFormat="{}{0:HH:mm:ss} → {1:HH:mm:ss}">
-                                                    <Binding Path="StartTime"/>
-                                                    <Binding Path="EndTime"/>
-                                                </MultiBinding>
-                                            </TextBlock.Text>
-                                        </TextBlock>
-                                    </StackPanel>
+                                                <!-- 时间段：副信息 -->
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding StringFormat="{}{0:HH:mm:ss} → {1:HH:mm:ss}">
+                                                            <Binding Path="StartTime"/>
+                                                            <Binding Path="EndTime"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </StackPanel>
 
-                                    <!-- 关联任务标签 -->
-                                    <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
+                                            <!-- 关联任务标签 -->
+                                            <Border Grid.Column="2" CornerRadius="4" Padding="6,2"
                                             Background="#EEF1FE"
                                             VerticalAlignment="Center" HorizontalAlignment="Left">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#EEF1FE"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding TaskId}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock FontSize="11">
-                                            <TextBlock.Text>
-                                                <MultiBinding Converter="{StaticResource TaskIdConverter}">
-                                                    <Binding Path="TaskId"/>
-                                                    <Binding Path="DataContext.Tasks" RelativeSource="{RelativeSource AncestorType=ListView}"/>
-                                                </MultiBinding>
-                                            </TextBlock.Text>
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Border>
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#EEF1FE"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding TaskId}" Value="{x:Null}">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock FontSize="11">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource TaskIdConverter}">
+                                                            <Binding Path="TaskId"/>
+                                                            <Binding Path="DataContext.Tasks" RelativeSource="{RelativeSource AncestorType=ListView}"/>
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
 
-                                    <Button Grid.Column="3" Content="删除"
+                                            <Button Grid.Column="3" Content="删除"
                                             Style="{StaticResource DangerTextButtonStyle}"
                                             Command="{Binding DataContext.DeleteSessionCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
                                             CommandParameter="{Binding Id}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </Grid>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Grid>
+                    </Grid>
+                </Border>
             </Grid>
-            </Border>
         </Grid>
-    </Grid>
 
         <!-- 通知条 -->
         <Border Background="{DynamicResource DangerBrush}" CornerRadius="6"
