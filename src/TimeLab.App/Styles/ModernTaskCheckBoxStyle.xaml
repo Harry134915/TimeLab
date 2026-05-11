@@ -1,82 +1,183 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
     <Style x:Key="ModernTaskCheckBoxStyle"
-TargetType="CheckBox">
-        <Setter Property="Width" Value="22"/>
-        <Setter Property="Height" Value="22"/>
+           TargetType="CheckBox">
+
+        <!-- 基础属性 -->
+
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="26"/>
         <Setter Property="Cursor" Value="Hand"/>
+
         <Setter Property="Template">
+
             <Setter.Value>
+
                 <ControlTemplate TargetType="CheckBox">
-                    <Grid>
-                        <!-- 外圆 -->
+
+                    <Grid Width="26"
+                          Height="26">
+
+                        <!-- 主圆 -->
+
                         <Border x:Name="Circle"
-                Width="20"
-                Height="20"
-                CornerRadius="10"
-                BorderThickness="2"
-                BorderBrush="#999"
-                Background="Transparent">
+                                Width="22"
+                                Height="22"
+                                CornerRadius="11"
+                                BorderThickness="2"
+                                BorderBrush="#B8B8B8"
+                                Background="Transparent"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                RenderTransformOrigin="0.5,0.5">
+
+                            <!-- 缩放 -->
+
+                            <Border.RenderTransform>
+
+                                <ScaleTransform x:Name="ScaleTransform"
+                                                ScaleX="1"
+                                                ScaleY="1"/>
+
+                            </Border.RenderTransform>
+
                             <Grid>
+
                                 <!-- 勾 -->
 
                                 <Path x:Name="CheckMark"
-                Data="M 4 10 L 8 14 L 15 5"
-                Stroke="White"
-                StrokeThickness="2.5"
-                StrokeEndLineCap="Round"
-                StrokeStartLineCap="Round"
-                Visibility="Collapsed"/>
+                                      Data="M 4 10 L 8 14 L 15 5"
+                                      Stroke="White"
+                                      StrokeThickness="2.5"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Opacity="0"
+                                      Stretch="None"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+
                             </Grid>
+
                         </Border>
+
                     </Grid>
 
+                    <!-- 动画资源 -->
+
+                    <ControlTemplate.Resources>
+
+                        <!-- Hover 放大 -->
+
+                        <Storyboard x:Key="HoverEnterAnimation">
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="ScaleTransform"
+                                Storyboard.TargetProperty="ScaleX"
+                                To="1.08"
+                                Duration="0:0:0.12"/>
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="ScaleTransform"
+                                Storyboard.TargetProperty="ScaleY"
+                                To="1.08"
+                                Duration="0:0:0.12"/>
+
+                        </Storyboard>
+
+                        <!-- Hover 恢复 -->
+
+                        <Storyboard x:Key="HoverLeaveAnimation">
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="ScaleTransform"
+                                Storyboard.TargetProperty="ScaleX"
+                                To="1"
+                                Duration="0:0:0.12"/>
+
+                            <DoubleAnimation
+                                Storyboard.TargetName="ScaleTransform"
+                                Storyboard.TargetProperty="ScaleY"
+                                To="1"
+                                Duration="0:0:0.12"/>
+
+                        </Storyboard>
+
+                    </ControlTemplate.Resources>
+
+                    <!-- 所有 Trigger 合并 -->
+
                     <ControlTemplate.Triggers>
-                        <!-- Hover -->
+
+                        <!-- Hover 状态 -->
 
                         <Trigger Property="IsMouseOver"
-                Value="True">
+                                 Value="True">
 
                             <Setter TargetName="Circle"
-                    Property="BorderBrush"
-                    Value="#4CAF50"/>
+                                    Property="BorderBrush"
+                                    Value="#22C55E"/>
+
+                            <Setter TargetName="Circle"
+                                    Property="Background"
+                                    Value="#1122C55E"/>
 
                         </Trigger>
 
-                        <!-- Checked -->
+                        <!-- Checked 状态 -->
 
                         <Trigger Property="IsChecked"
-                Value="True">
+                                 Value="True">
 
                             <Setter TargetName="Circle"
-                    Property="Background"
-                    Value="#4CAF50"/>
+                                    Property="Background"
+                                    Value="#22C55E"/>
 
                             <Setter TargetName="Circle"
-                    Property="BorderBrush"
-                    Value="#4CAF50"/>
+                                    Property="BorderBrush"
+                                    Value="#22C55E"/>
 
                             <Setter TargetName="CheckMark"
-                    Property="Visibility"
-                    Value="Visible"/>
+                                    Property="Opacity"
+                                    Value="1"/>
 
                         </Trigger>
 
-                        <!-- Disabled -->
+                        <!-- Disabled 状态 -->
 
                         <Trigger Property="IsEnabled"
-                Value="False">
+                                 Value="False">
 
                             <Setter Property="Opacity"
-                    Value="0.5"/>
+                                    Value="0.45"/>
 
                         </Trigger>
+
+                        <!-- Hover 进入动画 -->
+
+                        <EventTrigger RoutedEvent="MouseEnter">
+
+                            <BeginStoryboard
+                                Storyboard="{StaticResource HoverEnterAnimation}"/>
+
+                        </EventTrigger>
+
+                        <!-- Hover 离开动画 -->
+
+                        <EventTrigger RoutedEvent="MouseLeave">
+
+                            <BeginStoryboard
+                                Storyboard="{StaticResource HoverLeaveAnimation}"/>
+
+                        </EventTrigger>
 
                     </ControlTemplate.Triggers>
 
                 </ControlTemplate>
 
             </Setter.Value>
+
         </Setter>
 
     </Style>
