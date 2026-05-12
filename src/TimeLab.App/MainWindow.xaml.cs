@@ -88,17 +88,11 @@ public partial class MainWindow : Window
             current++;
             var t = Math.Min((double)current / steps, 1.0);
 
-            if (Background is SolidColorBrush bgBrush)
-            {
-                bgBrush.Color = Lerp(winFrom, winTo, t);
-            }
+            Background = new SolidColorBrush(Lerp(winFrom, winTo, t));
 
             foreach (var (from, to, key) in transitions)
             {
-                if (resources[key] is SolidColorBrush brush)
-                {
-                    brush.Color = Lerp(from, to, t);
-                }
+                resources[key] = new SolidColorBrush(Lerp(from, to, t));
             }
 
             if (current >= steps)
