@@ -88,10 +88,18 @@ public partial class MainWindow : Window
             current++;
             var t = Math.Min((double)current / steps, 1.0);
 
-            Background = new SolidColorBrush(Lerp(winFrom, winTo, t));
+            if (Background is SolidColorBrush bgBrush)
+            {
+                bgBrush.Color = Lerp(winFrom, winTo, t);
+            }
 
             foreach (var (from, to, key) in transitions)
-                resources[key] = new SolidColorBrush(Lerp(from, to, t));
+            {
+                if (resources[key] is SolidColorBrush brush)
+                {
+                    brush.Color = Lerp(from, to, t);
+                }
+            }
 
             if (current >= steps)
                 _fadeTimer?.Stop();
