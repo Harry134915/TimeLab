@@ -347,6 +347,48 @@
                                 FontSize="11" Padding="4,2"/>
                         </Grid>
 
+                        <!-- 模式标签 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
+                            <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#1122C55E"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ModeName}" Value="短休">
+                                                <Setter Property="Background" Value="#11F39C12"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ModeName}" Value="长休">
+                                                <Setter Property="Background" Value="#11E17055"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding ModeName}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ModeName}" Value="短休">
+                                                    <Setter Property="Foreground" Value="#F39C12"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding ModeName}" Value="长休">
+                                                    <Setter Property="Foreground" Value="{DynamicResource StopBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <TextBlock Text="{Binding CompletedFocusCount, StringFormat='已完成 {} 轮'}"
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </StackPanel>
+
+                        <!-- 今日统计 -->
+                        <TextBlock Text="{Binding TodayStats}" FontSize="11"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
+
                         <!-- 状态指示器：圆点 + 文字 -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
                             <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center" Margin="0,0,6,0">
@@ -443,6 +485,25 @@
                                 Command="{Binding ClearSelectedTaskCommand}"
                                 FontSize="11" Padding="6,2"/>
                         </StackPanel>
+
+                        <!-- 预设时长按钮 -->
+                        <ItemsControl ItemsSource="{Binding PresetMinutes}" Margin="0,0,0,10">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource SecondaryButtonStyle}"
+                                            Width="46" Height="26" Margin="0,0,4,0"
+                                            FontSize="11" Padding="0"
+                                            Content="{Binding StringFormat='{}{0}分'}"
+                                            Command="{Binding DataContext.StartPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Content="开始" Style="{StaticResource PrimaryButtonStyle}"
