@@ -19,6 +19,39 @@ public class PomodoroService
     /// <summary>当前计时器状态</summary>
     public TimerState CurrentState => _state;
 
+    /// <summary>预设目标时长（秒），0 表示正计时模式</summary>
+    public int TargetSeconds { get; private set; }
+
+    /// <summary>当前模式</summary>
+    public FocusMode CurrentMode { get; private set; } = FocusMode.Focus;
+
+    /// <summary>已完成专注次数（用于判断长休）</summary>
+    public int CompletedFocusCount { get; private set; }
+
+    /// <summary>切换到下一模式（专注→短休、短休→专注、第4次→长休）</summary>
+    public void AdvanceMode()
+    {
+        if (CurrentMode == FocusMode.Focus)
+        {
+            CompletedFocusCount++;
+            CurrentMode = CompletedFocusCount % 4 == 0
+                ? FocusMode.LongBreak
+                : FocusMode.ShortBreak;
+        }
+        else
+        {
+            CurrentMode = FocusMode.Focus;
+        }
+    }
+
+    /// <summary>当前模式建议的预设秒数</summary>
+    public int ModeDefaultSeconds => CurrentMode switch
+    {
+        FocusMode.ShortBreak => 5 * 60,
+        FocusMode.LongBreak => 15 * 60,
+        _ => 25 * 60
+    };
+
     /// <summary>获取所有历史专注记录</summary>
     public Task<IReadOnlyList<PomodoroSession>> GetSessionsAsync()
     {
@@ -31,20 +64,31 @@ public class PomodoroService
         return _repository.DeleteAsync(id);
     }
 
-    /// <summary>重置计时器为空闲状态，不生成记录</summary>
+    /// <summary>重置所有状态（模式不重置）</summary>
     public Task ResetAsync()
     {
         _state.Status = TimerStatus.Idle;
         _state.StartTime = null;
         _state.ElapsedTime = TimeSpan.Zero;
         _currentTaskId = null;
+        TargetSeconds = 0;
         return Task.CompletedTask;
     }
 
-    /// <summary>开始计时，可关联一个任务</summary>
-    public Task StartAsync(Guid? taskId = null)
+    /// <summary>重置所有状态包括模式</summary>
+    public Task FullResetAsync()
+    {
+        ResetAsync();
+        CurrentMode = FocusMode.Focus;
+        CompletedFocusCount = 0;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>开始计时，可关联任务和预设时长</summary>
+    public Task StartAsync(Guid? taskId = null, int targetSeconds = 0)
     {
         _currentTaskId = taskId;
+        TargetSeconds = targetSeconds;
         _state.Status = TimerStatus.Running;
         _state.StartTime = DateTime.Now;
         _state.ElapsedTime = TimeSpan.Zero;

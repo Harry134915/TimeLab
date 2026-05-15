@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Media;
 using System.Windows.Input;
@@ -39,6 +39,7 @@ public class MainViewModel : INotifyPropertyChanged
         SelectTaskCommand = new RelayCommand(p => SelectTask((Guid)p!));
         ClearSelectedTaskCommand = new RelayCommand(_ => ClearSelectedTask());
         StartTimerCommand = new RelayCommand(async _ => await StartTimerAsync());
+        StartPresetCommand = new RelayCommand(p => StartPreset((int)p!));
         PauseTimerCommand = new RelayCommand(async _ => await PauseTimerAsync());
         StopTimerCommand = new RelayCommand(async _ => await StopTimerAsync());
         ResetTimerCommand = new RelayCommand(async _ => await ResetTimerAsync());
@@ -71,6 +72,36 @@ public class MainViewModel : INotifyPropertyChanged
 
     /// <summary>时长单位列表</summary>
     public List<string> DurationUnits { get; } = ["秒", "分钟", "时"];
+
+    /// <summary>预设时长按钮（分钟），随模式动态切换</summary>
+    public int[] PresetMinutes => _pomodoroService.CurrentMode switch
+    {
+        FocusMode.ShortBreak => [3, 5, 10],
+        FocusMode.LongBreak => [10, 15, 30],
+        _ => [15, 25, 30, 45, 60]
+    };
+
+    /// <summary>当前模式名称</summary>
+    public string ModeName => _pomodoroService.CurrentMode switch
+    {
+        FocusMode.ShortBreak => "短休",
+        FocusMode.LongBreak => "长休",
+        _ => "专注"
+    };
+
+    /// <summary>模式建议时长（分钟）</summary>
+    public int ModeDefaultMinutes => _pomodoroService.ModeDefaultSeconds / 60;
+
+    /// <summary>已完成专注轮数</summary>
+    public int CompletedFocusCount => _pomodoroService.CompletedFocusCount;
+
+    /// <summary>今日统计文字</summary>
+    private string _todayStats = string.Empty;
+    public string TodayStats
+    {
+        get => _todayStats;
+        set { _todayStats = value; OnPropertyChanged(nameof(TodayStats)); }
+    }
 
     /// <summary>是否已超时</summary>
     private bool _isOvertime;
@@ -135,6 +166,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SelectTaskCommand { get; }
     public ICommand ClearSelectedTaskCommand { get; }
     public ICommand StartTimerCommand { get; }
+    public ICommand StartPresetCommand { get; }
     public ICommand PauseTimerCommand { get; }
     public ICommand StopTimerCommand { get; }
     public ICommand ResetTimerCommand { get; }
@@ -203,6 +235,32 @@ public class MainViewModel : INotifyPropertyChanged
         _notificationTimer?.Start();
     }
 
+    /// <summary>取预设时长和关联任务计划时长中有效的（取最小值，都无效返回0）</summary>
+    private int ResolveTargetSeconds()
+    {
+        var fromPreset = _pomodoroService.TargetSeconds;
+        var fromTask = SelectedTaskId.HasValue
+            ? Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value)?.PlannedSeconds ?? 0
+            : 0;
+
+        if (fromPreset > 0 && fromTask > 0) return Math.Min(fromPreset, fromTask);
+        if (fromPreset > 0) return fromPreset;
+        return fromTask;
+    }
+
+    private string TargetDescription()
+    {
+        if (_pomodoroService.TargetSeconds > 0)
+            return $"预设 {_pomodoroService.TargetSeconds / 60} 分钟已到！";
+        if (SelectedTaskId.HasValue)
+        {
+            var task = Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value);
+            if (task?.PlannedSeconds > 0)
+                return $"\"{task.Title}\" 任务已完成！";
+        }
+        return "";
+    }
+
     private int ParseDuration()
     {
         if (string.IsNullOrWhiteSpace(NewTaskDuration) || !int.TryParse(NewTaskDuration, out var value))
@@ -257,10 +315,23 @@ public class MainViewModel : INotifyPropertyChanged
         SelectedTaskId = null;
     }
 
-    /// <summary>开始计时</summary>
+    /// <summary>开始计时（手动）</summary>
     private Task StartTimerAsync()
     {
         _pomodoroService.StartAsync(SelectedTaskId);
+        _alarmPlayed = false;
+        IsOvertime = false;
+        _tick.Stop();
+        _tick.Start();
+        UpdateTimerDisplay();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>按预设时长（分钟）开始计时</summary>
+    private Task StartPreset(int minutes)
+    {
+        var seconds = minutes * 60;
+        _pomodoroService.StartAsync(SelectedTaskId, seconds);
         _alarmPlayed = false;
         IsOvertime = false;
         _tick.Stop();
@@ -298,6 +369,16 @@ public class MainViewModel : INotifyPropertyChanged
         UpdateTimerDisplay();
     }
 
+    private void RefreshTodayStats()
+    {
+        var today = DateTime.Today;
+        var sessions = Sessions.Where(s => s.StartTime.Date == today).ToList();
+        var count = sessions.Count;
+        var totalMinutes = (int)sessions.Sum(s => s.Duration.TotalMinutes);
+        var tasksDone = Tasks.Count(t => t.CompletedAt?.Date == today);
+        TodayStats = $"今日 {count} 次 · {totalMinutes} 分钟 · {tasksDone} 个任务";
+    }
+
     /// <summary>刷新计时器显示：状态文字、实时耗时、超时检测</summary>
     private void UpdateTimerDisplay()
     {
@@ -311,23 +392,44 @@ public class MainViewModel : INotifyPropertyChanged
             _ => ""
         };
 
+        RefreshTodayStats();
+
         var elapsed = state.ElapsedTime;
         if (state.Status == TimerStatus.Running && state.StartTime.HasValue)
             elapsed += DateTime.Now - state.StartTime.Value;
 
-        ElapsedDisplay = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
-
-        // 超时检测
-        if (state.Status == TimerStatus.Running && SelectedTaskId.HasValue && !_alarmPlayed)
+        // 预设模式显示倒计时，手动模式显示正计时
+        if (_pomodoroService.TargetSeconds > 0)
         {
-            var task = Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value);
-            if (task is not null && task.PlannedSeconds > 0
-                && elapsed.TotalSeconds >= task.PlannedSeconds)
+            var remaining = TimeSpan.FromSeconds(Math.Max(0, _pomodoroService.TargetSeconds - elapsed.TotalSeconds));
+            ElapsedDisplay = $"{(int)remaining.TotalHours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}";
+        }
+        else
+        {
+            ElapsedDisplay = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
+        }
+
+        // 超时检测：取预设时长和任务计划时长中有效的那个
+        if (state.Status == TimerStatus.Running && !_alarmPlayed)
+        {
+            var targetSeconds = ResolveTargetSeconds();
+            if (targetSeconds > 0 && elapsed.TotalSeconds >= targetSeconds)
             {
                 IsOvertime = true;
                 _alarmPlayed = true;
-                ShowNotification($"时间到！“{task.Title}” 任务已完成！");
+                var info = TargetDescription();
+                ShowNotification($"时间到！{info}");
                 SystemSounds.Beep.Play();
+
+                // 预设模式下自动切换到下一模式
+                if (_pomodoroService.TargetSeconds > 0)
+                {
+                    _pomodoroService.AdvanceMode();
+                    OnPropertyChanged(nameof(ModeName));
+                    OnPropertyChanged(nameof(ModeDefaultMinutes));
+                    OnPropertyChanged(nameof(CompletedFocusCount));
+                    OnPropertyChanged(nameof(PresetMinutes));
+                }
             }
         }
     }

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -40,8 +41,20 @@ public partial class MainWindow : Window
         {
             Text = "TimeLab",
             Icon = System.Drawing.SystemIcons.Information,
-            Visible = true
+            Visible = true,
+            ContextMenuStrip = new Forms.ContextMenuStrip()
         };
+        _notifyIcon.ContextMenuStrip.Items.Add("显示", null, (_, _) =>
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        });
+        _notifyIcon.ContextMenuStrip.Items.Add("退出", null, (_, _) =>
+        {
+            _actuallyQuit = true;
+            Close();
+        });
         _notifyIcon.DoubleClick += (_, _) =>
         {
             Show();
@@ -51,6 +64,19 @@ public partial class MainWindow : Window
 
         Loaded += async (_, _) => await viewModel.LoadAsync();
         Closed += (_, _) => _notifyIcon.Dispose();
+    }
+
+    private bool _actuallyQuit;
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!_actuallyQuit)
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+        base.OnClosing(e);
     }
 
     private void ShowBalloon(string message)
@@ -95,10 +121,7 @@ public partial class MainWindow : Window
 
             foreach (var (from, to, key) in transitions)
             {
-                if (resources[key] is SolidColorBrush brush)
-                {
-                    brush.Color = Lerp(from, to, t);
-                }
+                resources[key] = new SolidColorBrush(Lerp(from, to, t));
             }
 
             if (current >= steps)
