@@ -17,4 +17,6 @@ public class PomodoroSession
     public TimeSpan Duration { get; set; }
     /// <summary>备注，可选</summary>
     public string? Note { get; set; }
+    /// <summary>所属模式，专注/短休/长休</summary>
+    public FocusMode Mode { get; set; }
 }

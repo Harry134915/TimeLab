@@ -79,6 +79,8 @@
         <Style TargetType="TextBox">
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -347,49 +349,65 @@
                                 FontSize="11" Padding="4,2"/>
                         </Grid>
 
-                        <!-- 模式标签 -->
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                            <Border CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="#1122C55E"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ModeName}" Value="短休">
-                                                <Setter Property="Background" Value="#11F39C12"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding ModeName}" Value="长休">
-                                                <Setter Property="Background" Value="#11E17055"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding ModeName}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ModeName}" Value="短休">
-                                                    <Setter Property="Foreground" Value="#F39C12"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding ModeName}" Value="长休">
-                                                    <Setter Property="Foreground" Value="{DynamicResource StopBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Border>
-                            <TextBlock Text="{Binding CompletedFocusCount, StringFormat='已完成 {} 轮'}"
-                                       FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <!-- 循环模式进度 -->
+                        <TextBlock Text="{Binding CycleProgress}" FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource PrimaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCycleActive}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- 循环配置行 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCycleActive}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <TextBlock Text="专注" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,2,0"/>
+                            <TextBox Text="{Binding CycleFocusMinutes, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="32" Height="22" FontSize="11" Padding="2,2"
+                                     VerticalAlignment="Center" TextAlignment="Center"/>
+                            <TextBlock Text="分" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
+
+                            <TextBlock Text="休息" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,2,0"/>
+                            <TextBox Text="{Binding CycleBreakMinutes, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="32" Height="22" FontSize="11" Padding="2,2"
+                                     VerticalAlignment="Center" TextAlignment="Center"/>
+                            <TextBlock Text="分" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
+
+                            <TextBlock Text="共" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,2,0"/>
+                            <ComboBox ItemsSource="{Binding CycleRoundOptions}"
+                                      SelectedItem="{Binding CycleTotalRounds}"
+                                      Width="42" Height="22" FontSize="11"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="轮" VerticalAlignment="Center" FontSize="11"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
+
+                            <Button Content="开始循环" Style="{StaticResource PrimaryButtonStyle}"
+                                    Command="{Binding StartCycleCommand}"
+                                    FontSize="11" Width="80" Height="24" Padding="6,3"/>
                         </StackPanel>
 
-                        <!-- 今日统计 -->
-                        <TextBlock Text="{Binding TodayStats}" FontSize="11"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
-
-                        <!-- 状态指示器：圆点 + 文字 -->
+                    <!-- 状态指示器：圆点 + 文字 + 模式 -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
                             <Border Width="10" Height="10" CornerRadius="5" VerticalAlignment="Center" Margin="0,0,6,0">
                                 <Border.Style>
@@ -426,6 +444,15 @@
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}"
+                                       VerticalAlignment="Center" Margin="6,0,0,0">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} · 已完成 {1} 轮">
+                                        <Binding Path="ModeName"/>
+                                        <Binding Path="CompletedFocusCount"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
                             </TextBlock>
                         </StackPanel>
 
@@ -486,25 +513,6 @@
                                 FontSize="11" Padding="6,2"/>
                         </StackPanel>
 
-                        <!-- 预设时长按钮 -->
-                        <ItemsControl ItemsSource="{Binding PresetMinutes}" Margin="0,0,0,10">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Style="{StaticResource SecondaryButtonStyle}"
-                                            Width="46" Height="26" Margin="0,0,4,0"
-                                            FontSize="11" Padding="0"
-                                            Content="{Binding StringFormat='{}{0}分'}"
-                                            Command="{Binding DataContext.StartPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <Button Content="开始" Style="{StaticResource PrimaryButtonStyle}"
                                 Command="{Binding StartTimerCommand}"
@@ -564,15 +572,18 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- 左侧色条：关联任务=蓝色，无关联=灰色 -->
+                                            <!-- 左侧色条：按模式着色 -->
                                             <Border Grid.Column="0" Width="3" CornerRadius="2"
                                             VerticalAlignment="Stretch" Margin="0,2,8,2">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                                        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding TaskId}" Value="{x:Null}">
-                                                                <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                                            <DataTrigger Binding="{Binding Mode}" Value="ShortBreak">
+                                                                <Setter Property="Background" Value="#F39C12"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Mode}" Value="LongBreak">
+                                                                <Setter Property="Background" Value="{DynamicResource StopBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -580,10 +591,47 @@
                                             </Border>
 
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
-                                                <!-- 时长：主信息 -->
-                                                <TextBlock Text="{Binding Duration, Converter={StaticResource DurationConverter}}"
-                                                   FontSize="14" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextBrush}"/>
+                                                <!-- 时长：主信息 + 模式标签 -->
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Duration, Converter={StaticResource DurationConverter}}"
+                                                               FontSize="14" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <Border CornerRadius="3" Padding="4,1" Margin="6,0,0,0"
+                                                            VerticalAlignment="Center">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="#1122C55E"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Mode}" Value="ShortBreak">
+                                                                        <Setter Property="Background" Value="#11F39C12"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Mode}" Value="LongBreak">
+                                                                        <Setter Property="Background" Value="#11E17055"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock FontSize="10" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                                    <Setter Property="Text" Value="专注"/>
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Mode}" Value="ShortBreak">
+                                                                            <Setter Property="Foreground" Value="#F39C12"/>
+                                                                            <Setter Property="Text" Value="短休"/>
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Mode}" Value="LongBreak">
+                                                                            <Setter Property="Foreground" Value="{DynamicResource StopBrush}"/>
+                                                                            <Setter Property="Text" Value="长休"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </StackPanel>
                                                 <!-- 时间段：副信息 -->
                                                 <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}">
                                                     <TextBlock.Text>
@@ -633,6 +681,12 @@
                                 </ListView.ItemTemplate>
                             </ListView>
                         </Grid>
+
+                        <!-- 今日统计 -->
+                        <TextBlock Text="{Binding TodayStats}" FontSize="11"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+
                     </Grid>
                 </Border>
             </Grid>

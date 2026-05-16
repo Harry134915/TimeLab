@@ -40,6 +40,7 @@ public class MainViewModel : INotifyPropertyChanged
         ClearSelectedTaskCommand = new RelayCommand(_ => ClearSelectedTask());
         StartTimerCommand = new RelayCommand(async _ => await StartTimerAsync());
         StartPresetCommand = new RelayCommand(p => StartPreset((int)p!));
+        StartCycleCommand = new RelayCommand(async _ => await StartCycleAsync());
         PauseTimerCommand = new RelayCommand(async _ => await PauseTimerAsync());
         StopTimerCommand = new RelayCommand(async _ => await StopTimerAsync());
         ResetTimerCommand = new RelayCommand(async _ => await ResetTimerAsync());
@@ -94,6 +95,25 @@ public class MainViewModel : INotifyPropertyChanged
 
     /// <summary>已完成专注轮数</summary>
     public int CompletedFocusCount => _pomodoroService.CompletedFocusCount;
+
+    // ---- 循环模式配置 ----
+
+    /// <summary>循环：专注分钟</summary>
+    public int CycleFocusMinutes { get; set; } = 25;
+    /// <summary>循环：休息分钟</summary>
+    public int CycleBreakMinutes { get; set; } = 5;
+    /// <summary>循环：总轮数</summary>
+    public int CycleTotalRounds { get; set; } = 4;
+
+    /// <summary>循环轮数选项</summary>
+    public int[] CycleRoundOptions { get; } = [2, 3, 4, 6, 8];
+
+    /// <summary>循环是否激活</summary>
+    public bool IsCycleActive => _pomodoroService.IsCycleActive;
+    /// <summary>循环进度文字</summary>
+    public string CycleProgress => IsCycleActive
+        ? $"第 {_pomodoroService.CurrentRound}/{_pomodoroService.CycleTotalRounds} 轮 · {ModeName}"
+        : string.Empty;
 
     /// <summary>今日统计文字</summary>
     private string _todayStats = string.Empty;
@@ -167,6 +187,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ClearSelectedTaskCommand { get; }
     public ICommand StartTimerCommand { get; }
     public ICommand StartPresetCommand { get; }
+    public ICommand StartCycleCommand { get; }
     public ICommand PauseTimerCommand { get; }
     public ICommand StopTimerCommand { get; }
     public ICommand ResetTimerCommand { get; }
@@ -330,6 +351,8 @@ public class MainViewModel : INotifyPropertyChanged
     /// <summary>按预设时长（分钟）开始计时</summary>
     private Task StartPreset(int minutes)
     {
+        _pomodoroService.StopCycle();
+        NotifyCycleChanged();
         var seconds = minutes * 60;
         _pomodoroService.StartAsync(SelectedTaskId, seconds);
         _alarmPlayed = false;
@@ -338,6 +361,23 @@ public class MainViewModel : INotifyPropertyChanged
         _tick.Start();
         UpdateTimerDisplay();
         return Task.CompletedTask;
+    }
+
+    /// <summary>开始循环模式</summary>
+    private async Task StartCycleAsync()
+    {
+        _pomodoroService.StopCycle();
+        await _pomodoroService.StartCycleAsync(
+            CycleFocusMinutes * 60,
+            CycleBreakMinutes * 60,
+            CycleTotalRounds,
+            SelectedTaskId);
+        NotifyCycleChanged();
+        _alarmPlayed = false;
+        IsOvertime = false;
+        _tick.Stop();
+        _tick.Start();
+        UpdateTimerDisplay();
     }
 
     /// <summary>暂停计时</summary>
@@ -356,6 +396,11 @@ public class MainViewModel : INotifyPropertyChanged
         var session = await _pomodoroService.StopAsync();
         if (session is not null)
             Sessions.Add(session);
+        if (_pomodoroService.IsCycleActive)
+        {
+            _pomodoroService.StopCycle();
+            NotifyCycleChanged();
+        }
         UpdateTimerDisplay();
     }
 
@@ -365,6 +410,8 @@ public class MainViewModel : INotifyPropertyChanged
         _tick.Stop();
         _alarmPlayed = false;
         IsOvertime = false;
+        _pomodoroService.StopCycle();
+        NotifyCycleChanged();
         await _pomodoroService.ResetAsync();
         UpdateTimerDisplay();
     }
@@ -380,7 +427,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>刷新计时器显示：状态文字、实时耗时、超时检测</summary>
-    private void UpdateTimerDisplay()
+    private async void UpdateTimerDisplay()
     {
         var state = _pomodoroService.CurrentState;
         StatusText = state.Status switch
@@ -421,17 +468,52 @@ public class MainViewModel : INotifyPropertyChanged
                 ShowNotification($"时间到！{info}");
                 SystemSounds.Beep.Play();
 
-                // 预设模式下自动切换到下一模式
-                if (_pomodoroService.TargetSeconds > 0)
+                // 循环模式：自动停止→切换→重启
+                if (_pomodoroService.IsCycleActive)
+                {
+                    var session = await _pomodoroService.StopAsync();
+                    if (session is not null) Sessions.Add(session);
+
+                    var nextSeconds = _pomodoroService.AdvanceCycle();
+                    NotifyCycleChanged();
+
+                    if (nextSeconds > 0)
+                    {
+                        await _pomodoroService.StartAsync(SelectedTaskId, nextSeconds);
+                        _alarmPlayed = false;
+                        IsOvertime = false;
+                        _tick.Stop();
+                        _tick.Start();
+                    }
+                    else
+                    {
+                        _tick.Stop();
+                        UpdateTimerDisplay();
+                    }
+                }
+                // 普通预设模式下自动切换模式
+                else if (_pomodoroService.TargetSeconds > 0)
                 {
                     _pomodoroService.AdvanceMode();
-                    OnPropertyChanged(nameof(ModeName));
-                    OnPropertyChanged(nameof(ModeDefaultMinutes));
-                    OnPropertyChanged(nameof(CompletedFocusCount));
-                    OnPropertyChanged(nameof(PresetMinutes));
+                    NotifyModeChanged();
                 }
             }
         }
+    }
+
+    private void NotifyCycleChanged()
+    {
+        NotifyModeChanged();
+        OnPropertyChanged(nameof(IsCycleActive));
+        OnPropertyChanged(nameof(CycleProgress));
+    }
+
+    private void NotifyModeChanged()
+    {
+        OnPropertyChanged(nameof(ModeName));
+        OnPropertyChanged(nameof(ModeDefaultMinutes));
+        OnPropertyChanged(nameof(CompletedFocusCount));
+        OnPropertyChanged(nameof(PresetMinutes));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

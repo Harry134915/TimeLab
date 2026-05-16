@@ -52,6 +52,70 @@ public class PomodoroService
         _ => 25 * 60
     };
 
+    // ---- 循环模式 ----
+
+    /// <summary>是否处于循环模式</summary>
+    public bool IsCycleActive { get; private set; }
+
+    /// <summary>循环：专注秒数</summary>
+    public int CycleFocusSeconds { get; private set; }
+    /// <summary>循环：休息秒数</summary>
+    public int CycleBreakSeconds { get; private set; }
+    /// <summary>循环：总轮数</summary>
+    public int CycleTotalRounds { get; private set; }
+    /// <summary>循环：当前第几轮（1-based）</summary>
+    public int CurrentRound { get; private set; }
+
+    /// <summary>开始循环模式</summary>
+    public Task StartCycleAsync(int focusSeconds, int breakSeconds, int rounds, Guid? taskId = null)
+    {
+        IsCycleActive = true;
+        CycleFocusSeconds = focusSeconds;
+        CycleBreakSeconds = breakSeconds;
+        CycleTotalRounds = rounds;
+        CurrentRound = 1;
+        CurrentMode = FocusMode.Focus;
+        CompletedFocusCount = 0;
+
+        return StartAsync(taskId, focusSeconds);
+    }
+
+    /// <summary>循环模式下切换到下一阶段，返回新阶段目标秒数；循环结束返回 0</summary>
+    public int AdvanceCycle()
+    {
+        if (!IsCycleActive)
+            return 0;
+
+        if (CurrentMode == FocusMode.Focus)
+        {
+            CompletedFocusCount++;
+            CurrentMode = CompletedFocusCount % 4 == 0
+                ? FocusMode.LongBreak
+                : FocusMode.ShortBreak;
+            return CycleBreakSeconds;
+        }
+
+        // 休息结束
+        if (CurrentRound >= CycleTotalRounds)
+        {
+            IsCycleActive = false;
+            CurrentMode = FocusMode.Focus;
+            return 0;
+        }
+
+        CurrentRound++;
+        CurrentMode = FocusMode.Focus;
+        return CycleFocusSeconds;
+    }
+
+    /// <summary>停止循环</summary>
+    public void StopCycle()
+    {
+        IsCycleActive = false;
+        CurrentMode = FocusMode.Focus;
+        CompletedFocusCount = 0;
+    }
+
     /// <summary>获取所有历史专注记录</summary>
     public Task<IReadOnlyList<PomodoroSession>> GetSessionsAsync()
     {
@@ -126,7 +190,8 @@ public class PomodoroService
             StartTime = _state.StartTime!.Value,
             EndTime = endTime,
             Duration = _state.ElapsedTime,
-            Note = note
+            Note = note,
+            Mode = CurrentMode
         };
 
         await _repository.AddAsync(session);
