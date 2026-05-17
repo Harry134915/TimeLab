@@ -177,7 +177,7 @@
     </Window.Resources>
 
     <Grid>
-        <Grid Margin="12">
+        <Grid Margin="14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="5*"/>
                 <ColumnDefinition Width="4"/>
@@ -223,11 +223,9 @@
                     </Grid>
 
                     <Grid Grid.Row="2">
-                        <TextBlock Text="暂无任务" FontSize="13"
-                               Foreground="{DynamicResource MutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Tasks.Count}" Value="0">
@@ -235,8 +233,13 @@
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                            </StackPanel.Style>
+                            <TextBlock Text="📋" FontSize="22"
+                                       HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="暂无任务" FontSize="13"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
                         <ListView ItemsSource="{Binding Tasks}" d:ItemsSource="{d:SampleData ItemCount=5}">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
@@ -333,7 +336,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- 番茄钟卡片 -->
-                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,10">
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
                     <StackPanel>
                         <!-- 标题栏 -->
                         <Grid Margin="0,0,0,10">
@@ -395,10 +398,9 @@
 
                             <TextBlock Text="共" VerticalAlignment="Center" FontSize="11"
                                        Foreground="{DynamicResource MutedBrush}" Margin="0,0,2,0"/>
-                            <ComboBox ItemsSource="{Binding CycleRoundOptions}"
-                                      SelectedItem="{Binding CycleTotalRounds}"
-                                      Width="42" Height="22" FontSize="11"
-                                      VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding CycleTotalRoundsText, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="32" Height="22" FontSize="11" Padding="2,2"
+                                     VerticalAlignment="Center" TextAlignment="Center"/>
                             <TextBlock Text="轮" VerticalAlignment="Center" FontSize="11"
                                        Foreground="{DynamicResource MutedBrush}" Margin="0,0,6,0"/>
 
@@ -485,22 +487,6 @@
                             </TextBlock>
                         </Border>
 
-                        <!-- 超时提示 -->
-                        <TextBlock Text="时间到！" FontSize="13" FontWeight="Bold"
-                               Foreground="{DynamicResource DangerBrush}"
-                               HorizontalAlignment="Center" Margin="0,0,0,8">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsOvertime}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-
                         <!-- 关联任务 -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
                             <TextBlock Text="关联：" Foreground="{DynamicResource MutedBrush}"
@@ -547,11 +533,9 @@
                         </StackPanel>
 
                         <Grid Grid.Row="1">
-                            <TextBlock Text="暂无记录" FontSize="13"
-                                   Foreground="{DynamicResource MutedBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Sessions.Count}" Value="0">
@@ -559,8 +543,13 @@
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                </StackPanel.Style>
+                                <TextBlock Text="⌛" FontSize="22"
+                                           HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                <TextBlock Text="暂无记录" FontSize="13"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
                             <ListView ItemsSource="{Binding Sessions}">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>

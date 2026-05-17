@@ -102,11 +102,13 @@ public class MainViewModel : INotifyPropertyChanged
     public int CycleFocusMinutes { get; set; } = 25;
     /// <summary>循环：休息分钟</summary>
     public int CycleBreakMinutes { get; set; } = 5;
-    /// <summary>循环：总轮数</summary>
-    public int CycleTotalRounds { get; set; } = 4;
-
-    /// <summary>循环轮数选项</summary>
-    public int[] CycleRoundOptions { get; } = [2, 3, 4, 6, 8];
+    /// <summary>循环：轮数输入文本</summary>
+    private string _cycleTotalRoundsText = "4";
+    public string CycleTotalRoundsText
+    {
+        get => _cycleTotalRoundsText;
+        set { _cycleTotalRoundsText = value; OnPropertyChanged(nameof(CycleTotalRoundsText)); }
+    }
 
     /// <summary>循环是否激活</summary>
     public bool IsCycleActive => _pomodoroService.IsCycleActive;
@@ -271,8 +273,38 @@ public class MainViewModel : INotifyPropertyChanged
 
     private string TargetDescription()
     {
+        // 循环模式的提示
+        if (_pomodoroService.IsCycleActive)
+        {
+            var r = _pomodoroService.CurrentRound;
+            var t = _pomodoroService.CycleTotalRounds;
+
+            if (_pomodoroService.CurrentMode == FocusMode.Focus)
+            {
+                return r >= t
+                    ? $"第 {r}/{t} 轮专注完成！休息后结束"
+                    : $"第 {r}/{t} 轮专注完成！休息一下";
+            }
+
+            return r >= t
+                ? $"全部完成！共 {t} 轮"
+                : _pomodoroService.CurrentMode == FocusMode.ShortBreak
+                    ? $"第 {r}/{t} 轮短休结束，开始下一轮专注"
+                    : $"第 {r}/{t} 轮长休结束，下一轮专注";
+        }
+
+        // 普通预设模式
         if (_pomodoroService.TargetSeconds > 0)
-            return $"预设 {_pomodoroService.TargetSeconds / 60} 分钟已到！";
+        {
+            return _pomodoroService.CurrentMode switch
+            {
+                FocusMode.ShortBreak => "短休结束，开始专注",
+                FocusMode.LongBreak => "长休结束，下一轮专注",
+                _ => "专注完成！休息一下"
+            };
+        }
+
+        // 任务计划
         if (SelectedTaskId.HasValue)
         {
             var task = Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value);
@@ -367,10 +399,12 @@ public class MainViewModel : INotifyPropertyChanged
     private async Task StartCycleAsync()
     {
         _pomodoroService.StopCycle();
+        int.TryParse(CycleTotalRoundsText, out var rounds);
+        if (rounds < 1) rounds = 1;
         await _pomodoroService.StartCycleAsync(
             CycleFocusMinutes * 60,
             CycleBreakMinutes * 60,
-            CycleTotalRounds,
+            rounds,
             SelectedTaskId);
         NotifyCycleChanged();
         _alarmPlayed = false;
