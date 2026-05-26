@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Text.Json;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using WpfColor = System.Windows.Media.Color;
@@ -13,8 +15,14 @@ namespace TimeLab.App;
 public partial class MainWindow : Window
 {
     private readonly Forms.NotifyIcon _notifyIcon;
+    private readonly MainViewModel _viewModel;
     private bool _isDark;
     private DispatcherTimer? _fadeTimer;
+
+    private static readonly string SettingsDir = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "TimeLab");
+    private static readonly string SettingsPath = System.IO.Path.Combine(SettingsDir, "settings.json");
 
     private static readonly (string key, string light, string dark)[] BgBrushes =
     [
@@ -35,7 +43,10 @@ public partial class MainWindow : Window
         var pomodoroService = new PomodoroService(sessionRepo);
 
         var viewModel = new MainViewModel(taskService, pomodoroService, ShowBalloon, onToggleDark: ToggleDarkMode);
+        _viewModel = viewModel;
         DataContext = viewModel;
+
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
         _notifyIcon = new Forms.NotifyIcon
         {
@@ -62,7 +73,11 @@ public partial class MainWindow : Window
             Activate();
         };
 
-        Loaded += async (_, _) => await viewModel.LoadAsync();
+        Loaded += async (_, _) =>
+        {
+            await _viewModel.LoadAsync();
+            LoadAndApplySettings();
+        };
         Closed += (_, _) => _notifyIcon.Dispose();
     }
 
@@ -77,6 +92,27 @@ public partial class MainWindow : Window
             return;
         }
         base.OnClosing(e);
+    }
+
+    protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Handled) return;
+
+        // 焦点在输入框内时不拦截快捷键
+        if (Keyboard.FocusedElement is System.Windows.Controls.TextBox) return;
+
+        switch (e.Key)
+        {
+            case Key.Space:
+                _viewModel.ToggleTimerCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Escape:
+                _viewModel.StopOrResetCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
     }
 
     private void ShowBalloon(string message)
@@ -138,4 +174,49 @@ public partial class MainWindow : Window
 
     private static WpfColor ParseColor(string hex) =>
         (WpfColor)WpfColorConverter.ConvertFromString(hex)!;
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsDarkMode))
+            SaveSettings();
+    }
+
+    private void LoadAndApplySettings()
+    {
+        try
+        {
+            if (!System.IO.File.Exists(SettingsPath)) return;
+
+            var json = System.IO.File.ReadAllText(SettingsPath);
+            var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+            if (settings is not null && settings.TryGetValue("IsDarkMode", out var element))
+            {
+                if (element.GetBoolean())
+                    _viewModel.IsDarkMode = true;
+            }
+        }
+        catch
+        {
+            // 设置文件损坏时忽略，使用默认浅色模式
+        }
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            if (!System.IO.Directory.Exists(SettingsDir))
+                System.IO.Directory.CreateDirectory(SettingsDir);
+
+            var settings = new Dictionary<string, object>
+            {
+                ["IsDarkMode"] = _viewModel.IsDarkMode
+            };
+            System.IO.File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings));
+        }
+        catch
+        {
+            // 保存失败时静默忽略
+        }
+    }
 }

@@ -53,7 +53,7 @@ public class JsonTaskRepository : ITaskRepository
         await SaveAsync(items);
     }
 
-    /// <summary>从 JSON 文件加载任务列表，文件不存在时返回空列表</summary>
+    /// <summary>从 JSON 文件加载任务列表，文件不存在时返回空列表，文件损坏时备份并返回空列表</summary>
     private static async Task<List<TaskItem>> LoadAsync()
     {
         if (!Directory.Exists(DataDir))
@@ -62,8 +62,18 @@ public class JsonTaskRepository : ITaskRepository
         if (!File.Exists(FilePath))
             return [];
 
-        await using var stream = File.OpenRead(FilePath);
-        return await JsonSerializer.DeserializeAsync<List<TaskItem>>(stream) ?? [];
+        try
+        {
+            await using var stream = File.OpenRead(FilePath);
+            return await JsonSerializer.DeserializeAsync<List<TaskItem>>(stream) ?? [];
+        }
+        catch (JsonException)
+        {
+            var backup = FilePath + ".bak";
+            if (File.Exists(backup)) File.Delete(backup);
+            File.Move(FilePath, backup);
+            return [];
+        }
     }
 
     /// <summary>将任务列表写入 JSON 文件</summary>

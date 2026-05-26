@@ -39,11 +39,13 @@ public class MainViewModel : INotifyPropertyChanged
         SelectTaskCommand = new RelayCommand(p => SelectTask((Guid)p!));
         ClearSelectedTaskCommand = new RelayCommand(_ => ClearSelectedTask());
         StartTimerCommand = new RelayCommand(async _ => await StartTimerAsync());
-        StartPresetCommand = new RelayCommand(p => StartPreset((int)p!));
-        StartCycleCommand = new RelayCommand(async _ => await StartCycleAsync());
         PauseTimerCommand = new RelayCommand(async _ => await PauseTimerAsync());
         StopTimerCommand = new RelayCommand(async _ => await StopTimerAsync());
         ResetTimerCommand = new RelayCommand(async _ => await ResetTimerAsync());
+        ToggleTimerCommand = new RelayCommand(async _ => await ToggleTimerAsync());
+        StopOrResetCommand = new RelayCommand(async _ => await StopOrResetAsync());
+        StartPresetCommand = new RelayCommand(p => StartPreset((int)p!));
+        StartCycleCommand = new RelayCommand(async _ => await StartCycleAsync());
     }
 
     /// <summary>任务列表</summary>
@@ -178,8 +180,13 @@ public class MainViewModel : INotifyPropertyChanged
     public string StatusText
     {
         get => _statusText;
-        set { _statusText = value; OnPropertyChanged(nameof(StatusText)); }
+        set { _statusText = value; OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(StartButtonText)); }
     }
+
+    /// <summary>开始按钮文字：空闲时"开始"，暂停/停止后"继续"</summary>
+    public string StartButtonText => _pomodoroService.CurrentState.Status is TimerStatus.Paused or TimerStatus.Stopped
+        ? "继续"
+        : "开始";
 
     public ICommand AddTaskCommand { get; }
     public ICommand CompleteTaskCommand { get; }
@@ -188,11 +195,13 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SelectTaskCommand { get; }
     public ICommand ClearSelectedTaskCommand { get; }
     public ICommand StartTimerCommand { get; }
-    public ICommand StartPresetCommand { get; }
-    public ICommand StartCycleCommand { get; }
     public ICommand PauseTimerCommand { get; }
     public ICommand StopTimerCommand { get; }
     public ICommand ResetTimerCommand { get; }
+    public ICommand ToggleTimerCommand { get; }
+    public ICommand StopOrResetCommand { get; }
+    public ICommand StartPresetCommand { get; }
+    public ICommand StartCycleCommand { get; }
     /// <summary>是否深色模式</summary>
     private bool _isDarkMode;
     public bool IsDarkMode
@@ -262,13 +271,13 @@ public class MainViewModel : INotifyPropertyChanged
     private int ResolveTargetSeconds()
     {
         var fromPreset = _pomodoroService.TargetSeconds;
+        if (fromPreset <= 0) return 0;
+
         var fromTask = SelectedTaskId.HasValue
             ? Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value)?.PlannedSeconds ?? 0
             : 0;
 
-        if (fromPreset > 0 && fromTask > 0) return Math.Min(fromPreset, fromTask);
-        if (fromPreset > 0) return fromPreset;
-        return fromTask;
+        return fromTask > 0 ? Math.Min(fromPreset, fromTask) : fromPreset;
     }
 
     private string TargetDescription()
@@ -346,6 +355,7 @@ public class MainViewModel : INotifyPropertyChanged
         var item = Tasks.FirstOrDefault(t => t.Id == id);
         if (item is not null)
             Tasks.Remove(item);
+        RefreshTodayStats();
     }
 
     /// <summary>删除指定专注记录</summary>
@@ -355,6 +365,7 @@ public class MainViewModel : INotifyPropertyChanged
         var session = Sessions.FirstOrDefault(s => s.Id == id);
         if (session is not null)
             Sessions.Remove(session);
+        RefreshTodayStats();
     }
 
     /// <summary>选择关联任务</summary>
@@ -368,10 +379,14 @@ public class MainViewModel : INotifyPropertyChanged
         SelectedTaskId = null;
     }
 
-    /// <summary>开始计时（手动）</summary>
+    /// <summary>开始计时（手动），暂停/停止状态下恢复计时</summary>
     private Task StartTimerAsync()
     {
-        _pomodoroService.StartAsync(SelectedTaskId);
+        var status = _pomodoroService.CurrentState.Status;
+        if (status == TimerStatus.Paused || status == TimerStatus.Stopped)
+            _pomodoroService.ResumeAsync();
+        else
+            _pomodoroService.StartAsync(SelectedTaskId);
         _alarmPlayed = false;
         IsOvertime = false;
         _tick.Stop();
@@ -448,6 +463,37 @@ public class MainViewModel : INotifyPropertyChanged
         NotifyCycleChanged();
         await _pomodoroService.ResetAsync();
         UpdateTimerDisplay();
+    }
+
+    /// <summary>Space 快捷键：空闲/暂停→开始，运行→暂停</summary>
+    private async Task ToggleTimerAsync()
+    {
+        switch (_pomodoroService.CurrentState.Status)
+        {
+            case TimerStatus.Running:
+                await PauseTimerAsync();
+                break;
+            case TimerStatus.Idle:
+            case TimerStatus.Paused:
+            case TimerStatus.Stopped:
+                await StartTimerAsync();
+                break;
+        }
+    }
+
+    /// <summary>Esc 快捷键：运行/暂停→停止，其他→清除</summary>
+    private async Task StopOrResetAsync()
+    {
+        switch (_pomodoroService.CurrentState.Status)
+        {
+            case TimerStatus.Running:
+            case TimerStatus.Paused:
+                await StopTimerAsync();
+                break;
+            default:
+                await ResetTimerAsync();
+                break;
+        }
     }
 
     private void RefreshTodayStats()

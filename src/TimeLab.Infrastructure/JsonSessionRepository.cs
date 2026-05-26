@@ -43,7 +43,7 @@ public class JsonSessionRepository : ISessionRepository
         await SaveAsync(sessions);
     }
 
-    /// <summary>从 JSON 文件加载专注记录列表，文件不存在时返回空列表</summary>
+    /// <summary>从 JSON 文件加载专注记录列表，文件不存在时返回空列表，文件损坏时备份并返回空列表</summary>
     private static async Task<List<PomodoroSession>> LoadAsync()
     {
         if (!Directory.Exists(DataDir))
@@ -52,8 +52,18 @@ public class JsonSessionRepository : ISessionRepository
         if (!File.Exists(FilePath))
             return [];
 
-        await using var stream = File.OpenRead(FilePath);
-        return await JsonSerializer.DeserializeAsync<List<PomodoroSession>>(stream) ?? [];
+        try
+        {
+            await using var stream = File.OpenRead(FilePath);
+            return await JsonSerializer.DeserializeAsync<List<PomodoroSession>>(stream) ?? [];
+        }
+        catch (JsonException)
+        {
+            var backup = FilePath + ".bak";
+            if (File.Exists(backup)) File.Delete(backup);
+            File.Move(FilePath, backup);
+            return [];
+        }
     }
 
     /// <summary>将专注记录列表写入 JSON 文件</summary>

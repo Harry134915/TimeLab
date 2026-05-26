@@ -500,7 +500,7 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="开始" Style="{StaticResource PrimaryButtonStyle}"
+                            <Button Content="{Binding StartButtonText}" Style="{StaticResource PrimaryButtonStyle}"
                                 Command="{Binding StartTimerCommand}"
                                 Width="66" Height="34" Margin="0,0,6,0"/>
                             <Button Content="暂停" Style="{StaticResource SecondaryButtonStyle}"

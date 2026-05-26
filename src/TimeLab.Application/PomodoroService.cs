@@ -159,6 +159,14 @@ public class PomodoroService
         return Task.CompletedTask;
     }
 
+    /// <summary>从暂停/停止状态恢复计时，保留已累计时长</summary>
+    public Task ResumeAsync()
+    {
+        _state.Status = TimerStatus.Running;
+        _state.StartTime = DateTime.Now;
+        return Task.CompletedTask;
+    }
+
     /// <summary>暂停计时，累加已计时长</summary>
     public Task PauseAsync()
     {
@@ -193,6 +201,8 @@ public class PomodoroService
             Note = note,
             Mode = CurrentMode
         };
+
+        _state.ElapsedTime = TimeSpan.Zero;
 
         await _repository.AddAsync(session);
         return session;
