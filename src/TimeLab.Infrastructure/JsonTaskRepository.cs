@@ -82,7 +82,17 @@ public class JsonTaskRepository : ITaskRepository
         if (!Directory.Exists(DataDir))
             Directory.CreateDirectory(DataDir);
 
-        await using var stream = File.Create(FilePath);
-        await JsonSerializer.SerializeAsync(stream, items, Options);
+        var tempPath = FilePath + ".tmp";
+        var backupPath = FilePath + ".bak";
+
+        await using (var stream = File.Create(tempPath))
+        {
+            await JsonSerializer.SerializeAsync(stream, items, Options);
+        }
+
+        if (File.Exists(FilePath))
+            File.Replace(tempPath, FilePath, backupPath, ignoreMetadataErrors: true);
+        else
+            File.Move(tempPath, FilePath);
     }
 }
