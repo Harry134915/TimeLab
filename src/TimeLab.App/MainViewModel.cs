@@ -510,6 +510,17 @@ public class MainViewModel : INotifyPropertyChanged
     private async void UpdateTimerDisplay()
     {
         var state = _pomodoroService.CurrentState;
+        RefreshStatusText(state);
+        RefreshTodayStats();
+
+        var elapsed = GetCurrentElapsed(state);
+        RefreshElapsedDisplay(elapsed);
+
+        await HandleTimerTargetAsync(state, elapsed);
+    }
+
+    private void RefreshStatusText(TimerState state)
+    {
         StatusText = state.Status switch
         {
             TimerStatus.Idle => "就绪",
@@ -518,14 +529,19 @@ public class MainViewModel : INotifyPropertyChanged
             TimerStatus.Stopped => "已停止",
             _ => ""
         };
+    }
 
-        RefreshTodayStats();
-
+    private static TimeSpan GetCurrentElapsed(TimerState state)
+    {
         var elapsed = state.ElapsedTime;
         if (state.Status == TimerStatus.Running && state.StartTime.HasValue)
             elapsed += DateTime.Now - state.StartTime.Value;
 
-        // 预设模式显示倒计时，手动模式显示正计时
+        return elapsed;
+    }
+
+    private void RefreshElapsedDisplay(TimeSpan elapsed)
+    {
         if (_pomodoroService.TargetSeconds > 0)
         {
             var remaining = TimeSpan.FromSeconds(Math.Max(0, _pomodoroService.TargetSeconds - elapsed.TotalSeconds));
@@ -535,50 +551,61 @@ public class MainViewModel : INotifyPropertyChanged
         {
             ElapsedDisplay = $"{(int)elapsed.TotalHours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}";
         }
+    }
 
-        // 超时检测：取预设时长和任务计划时长中有效的那个
-        if (state.Status == TimerStatus.Running && !_alarmPlayed)
+    private async Task HandleTimerTargetAsync(TimerState state, TimeSpan elapsed)
+    {
+        if (state.Status != TimerStatus.Running || _alarmPlayed)
+            return;
+
+        var targetSeconds = ResolveTargetSeconds();
+        if (targetSeconds <= 0 || elapsed.TotalSeconds < targetSeconds)
+            return;
+
+        NotifyTimerReachedTarget();
+
+        if (_pomodoroService.IsCycleActive)
         {
-            var targetSeconds = ResolveTargetSeconds();
-            if (targetSeconds > 0 && elapsed.TotalSeconds >= targetSeconds)
-            {
-                IsOvertime = true;
-                _alarmPlayed = true;
-                var info = TargetDescription();
-                ShowNotification($"时间到！{info}");
-                SystemSounds.Beep.Play();
-
-                // 循环模式：自动停止→切换→重启
-                if (_pomodoroService.IsCycleActive)
-                {
-                    var session = await _pomodoroService.StopAsync();
-                    if (session is not null) Sessions.Add(session);
-
-                    var nextSeconds = _pomodoroService.AdvanceCycle();
-                    NotifyCycleChanged();
-
-                    if (nextSeconds > 0)
-                    {
-                        await _pomodoroService.StartAsync(SelectedTaskId, nextSeconds);
-                        _alarmPlayed = false;
-                        IsOvertime = false;
-                        _tick.Stop();
-                        _tick.Start();
-                    }
-                    else
-                    {
-                        _tick.Stop();
-                        UpdateTimerDisplay();
-                    }
-                }
-                // 普通预设模式下自动切换模式
-                else if (_pomodoroService.TargetSeconds > 0)
-                {
-                    _pomodoroService.AdvanceMode();
-                    NotifyModeChanged();
-                }
-            }
+            await HandleCycleTargetReachedAsync();
+            return;
         }
+
+        if (_pomodoroService.TargetSeconds > 0)
+        {
+            _pomodoroService.AdvanceMode();
+            NotifyModeChanged();
+        }
+    }
+
+    private void NotifyTimerReachedTarget()
+    {
+        IsOvertime = true;
+        _alarmPlayed = true;
+        ShowNotification($"时间到！{TargetDescription()}");
+        SystemSounds.Beep.Play();
+    }
+
+    private async Task HandleCycleTargetReachedAsync()
+    {
+        var session = await _pomodoroService.StopAsync();
+        if (session is not null)
+            Sessions.Add(session);
+
+        var nextSeconds = _pomodoroService.AdvanceCycle();
+        NotifyCycleChanged();
+
+        if (nextSeconds > 0)
+        {
+            await _pomodoroService.StartAsync(SelectedTaskId, nextSeconds);
+            _alarmPlayed = false;
+            IsOvertime = false;
+            _tick.Stop();
+            _tick.Start();
+            return;
+        }
+
+        _tick.Stop();
+        UpdateTimerDisplay();
     }
 
     private void NotifyCycleChanged()
