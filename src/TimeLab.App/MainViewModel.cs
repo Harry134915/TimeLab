@@ -183,8 +183,8 @@ public class MainViewModel : INotifyPropertyChanged
         set { _statusText = value; OnPropertyChanged(nameof(StatusText)); OnPropertyChanged(nameof(StartButtonText)); }
     }
 
-    /// <summary>开始按钮文字：空闲时"开始"，暂停/停止后"继续"</summary>
-    public string StartButtonText => _pomodoroService.CurrentState.Status is TimerStatus.Paused or TimerStatus.Stopped
+    /// <summary>开始按钮文字：暂停时"继续"，其他状态为"开始"</summary>
+    public string StartButtonText => _pomodoroService.CurrentState.Status is TimerStatus.Paused
         ? "继续"
         : "开始";
 
@@ -379,11 +379,11 @@ public class MainViewModel : INotifyPropertyChanged
         SelectedTaskId = null;
     }
 
-    /// <summary>开始计时（手动），暂停/停止状态下恢复计时</summary>
+    /// <summary>开始计时（手动），暂停状态下恢复计时，停止后重新开始</summary>
     private Task StartTimerAsync()
     {
         var status = _pomodoroService.CurrentState.Status;
-        if (status == TimerStatus.Paused || status == TimerStatus.Stopped)
+        if (status == TimerStatus.Paused)
             _pomodoroService.ResumeAsync();
         else
             _pomodoroService.StartAsync(SelectedTaskId);

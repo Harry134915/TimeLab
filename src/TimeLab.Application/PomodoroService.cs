@@ -10,6 +10,7 @@ public class PomodoroService
     private readonly ISessionRepository _repository;
     private readonly TimerState _state = new();
     private Guid? _currentTaskId;
+    private DateTime? _sessionStartTime;
 
     public PomodoroService(ISessionRepository repository)
     {
@@ -134,6 +135,7 @@ public class PomodoroService
         _state.Status = TimerStatus.Idle;
         _state.StartTime = null;
         _state.ElapsedTime = TimeSpan.Zero;
+        _sessionStartTime = null;
         _currentTaskId = null;
         TargetSeconds = 0;
         return Task.CompletedTask;
@@ -151,17 +153,23 @@ public class PomodoroService
     /// <summary>开始计时，可关联任务和预设时长</summary>
     public Task StartAsync(Guid? taskId = null, int targetSeconds = 0)
     {
+        var now = DateTime.Now;
+
         _currentTaskId = taskId;
+        _sessionStartTime = now;
         TargetSeconds = targetSeconds;
         _state.Status = TimerStatus.Running;
-        _state.StartTime = DateTime.Now;
+        _state.StartTime = now;
         _state.ElapsedTime = TimeSpan.Zero;
         return Task.CompletedTask;
     }
 
-    /// <summary>从暂停/停止状态恢复计时，保留已累计时长</summary>
+    /// <summary>从暂停状态恢复计时，保留已累计时长</summary>
     public Task ResumeAsync()
     {
+        if (_state.Status != TimerStatus.Paused)
+            return Task.CompletedTask;
+
         _state.Status = TimerStatus.Running;
         _state.StartTime = DateTime.Now;
         return Task.CompletedTask;
@@ -175,6 +183,7 @@ public class PomodoroService
 
         _state.Status = TimerStatus.Paused;
         _state.ElapsedTime += DateTime.Now - _state.StartTime!.Value;
+        _state.StartTime = null;
         return Task.CompletedTask;
     }
 
@@ -190,19 +199,22 @@ public class PomodoroService
             _state.ElapsedTime += endTime - _state.StartTime!.Value;
 
         _state.Status = TimerStatus.Stopped;
+        var startTime = _sessionStartTime ?? _state.StartTime ?? endTime;
 
         var session = new PomodoroSession
         {
             Id = Guid.NewGuid(),
             TaskId = _currentTaskId,
-            StartTime = _state.StartTime!.Value,
+            StartTime = startTime,
             EndTime = endTime,
             Duration = _state.ElapsedTime,
             Note = note,
             Mode = CurrentMode
         };
 
+        _state.StartTime = null;
         _state.ElapsedTime = TimeSpan.Zero;
+        _sessionStartTime = null;
 
         await _repository.AddAsync(session);
         return session;
