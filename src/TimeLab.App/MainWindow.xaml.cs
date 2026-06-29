@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -16,13 +15,9 @@ public partial class MainWindow : Window
 {
     private readonly Forms.NotifyIcon _notifyIcon;
     private readonly MainViewModel _viewModel;
+    private readonly SettingsStore _settingsStore = new();
     private bool _isDark;
     private DispatcherTimer? _fadeTimer;
-
-    private static readonly string SettingsDir = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TimeLab");
-    private static readonly string SettingsPath = System.IO.Path.Combine(SettingsDir, "settings.json");
 
     private static readonly (string key, string light, string dark)[] BgBrushes =
     [
@@ -183,40 +178,16 @@ public partial class MainWindow : Window
 
     private void LoadAndApplySettings()
     {
-        try
-        {
-            if (!System.IO.File.Exists(SettingsPath)) return;
-
-            var json = System.IO.File.ReadAllText(SettingsPath);
-            var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-            if (settings is not null && settings.TryGetValue("IsDarkMode", out var element))
-            {
-                if (element.GetBoolean())
-                    _viewModel.IsDarkMode = true;
-            }
-        }
-        catch
-        {
-            // 设置文件损坏时忽略，使用默认浅色模式
-        }
+        var settings = _settingsStore.Load();
+        if (settings.IsDarkMode)
+            _viewModel.IsDarkMode = true;
     }
 
     private void SaveSettings()
     {
-        try
+        _settingsStore.Save(new AppSettings
         {
-            if (!System.IO.Directory.Exists(SettingsDir))
-                System.IO.Directory.CreateDirectory(SettingsDir);
-
-            var settings = new Dictionary<string, object>
-            {
-                ["IsDarkMode"] = _viewModel.IsDarkMode
-            };
-            System.IO.File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings));
-        }
-        catch
-        {
-            // 保存失败时静默忽略
-        }
+            IsDarkMode = _viewModel.IsDarkMode
+        });
     }
 }
