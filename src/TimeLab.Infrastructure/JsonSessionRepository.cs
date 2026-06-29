@@ -1,4 +1,3 @@
-using System.Text.Json;
 using TimeLab.Application;
 using TimeLab.Core;
 
@@ -9,80 +8,28 @@ namespace TimeLab.Infrastructure;
 /// </summary>
 public class JsonSessionRepository : ISessionRepository
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TimeLab");
-
-    private static readonly string FilePath = Path.Combine(DataDir, "sessions.json");
-
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true
-    };
+    private readonly JsonFileStore<PomodoroSession> _store = new("sessions.json");
 
     /// <summary>获取所有专注记录</summary>
     public async Task<IReadOnlyList<PomodoroSession>> GetAllAsync()
     {
-        var sessions = await LoadAsync();
+        var sessions = await _store.LoadAsync();
         return sessions;
     }
 
     /// <summary>添加新的专注记录，写入 JSON 文件</summary>
     public async Task AddAsync(PomodoroSession session)
     {
-        var sessions = await LoadAsync();
+        var sessions = await _store.LoadAsync();
         sessions.Add(session);
-        await SaveAsync(sessions);
+        await _store.SaveAsync(sessions);
     }
 
     /// <summary>按 ID 删除专注记录</summary>
     public async Task DeleteAsync(Guid id)
     {
-        var sessions = await LoadAsync();
+        var sessions = await _store.LoadAsync();
         sessions.RemoveAll(s => s.Id == id);
-        await SaveAsync(sessions);
-    }
-
-    /// <summary>从 JSON 文件加载专注记录列表，文件不存在时返回空列表，文件损坏时备份并返回空列表</summary>
-    private static async Task<List<PomodoroSession>> LoadAsync()
-    {
-        if (!Directory.Exists(DataDir))
-            Directory.CreateDirectory(DataDir);
-
-        if (!File.Exists(FilePath))
-            return [];
-
-        try
-        {
-            await using var stream = File.OpenRead(FilePath);
-            return await JsonSerializer.DeserializeAsync<List<PomodoroSession>>(stream) ?? [];
-        }
-        catch (JsonException)
-        {
-            var backup = FilePath + ".bak";
-            if (File.Exists(backup)) File.Delete(backup);
-            File.Move(FilePath, backup);
-            return [];
-        }
-    }
-
-    /// <summary>将专注记录列表写入 JSON 文件</summary>
-    private static async Task SaveAsync(List<PomodoroSession> sessions)
-    {
-        if (!Directory.Exists(DataDir))
-            Directory.CreateDirectory(DataDir);
-
-        var tempPath = FilePath + ".tmp";
-        var backupPath = FilePath + ".bak";
-
-        await using (var stream = File.Create(tempPath))
-        {
-            await JsonSerializer.SerializeAsync(stream, sessions, Options);
-        }
-
-        if (File.Exists(FilePath))
-            File.Replace(tempPath, FilePath, backupPath, ignoreMetadataErrors: true);
-        else
-            File.Move(tempPath, FilePath);
+        await _store.SaveAsync(sessions);
     }
 }
