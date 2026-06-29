@@ -6,6 +6,7 @@
 * `TimeLab.Application`：应用服务层
 * `TimeLab.Core`：领域模型层
 * `TimeLab.Infrastructure`：数据存储层
+* `TimeLab.Tests`：测试项目
 
 ---
 
@@ -16,6 +17,7 @@
 * App → Application, Infrastructure
 * Application → Core
 * Infrastructure → Application, Core
+* Tests → Application, Core, Infrastructure
 * Core → 无依赖
 
 这些依赖方向符合当前项目规则。Core 不依赖任何其他层。
@@ -66,3 +68,14 @@ Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 * XAML 样式：任务勾选框、开关、主题资源
 
 View 中不应编写核心业务规则，业务行为应优先放在 Application 服务中。
+
+### Tests
+
+验证核心服务和存储行为：
+
+* `TaskServiceTests`：验证任务创建、完成和删除
+* `PomodoroServiceTests`：验证计时开始、暂停、继续和 Session 生成
+* `JsonTaskRepositoryTests`：验证 JSON 文件不存在、保存读取和损坏备份
+* 测试使用临时目录，不写入真实用户数据目录
+
+Tests 可以依赖 Application、Core 和 Infrastructure，但不应依赖 App 或启动 WPF UI。

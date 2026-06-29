@@ -12,9 +12,9 @@ internal sealed class JsonFileStore<T>
     private readonly string _dataDir;
     private readonly string _filePath;
 
-    public JsonFileStore(string fileName)
+    public JsonFileStore(string fileName, string? dataDir = null)
     {
-        _dataDir = Path.Combine(
+        _dataDir = dataDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TimeLab");
 

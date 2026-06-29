@@ -12,6 +12,7 @@ TimeLab 是一个简单的本地时间管理工具，用于管理任务、进行
 * WPF
 * MVVM
 * JSON 本地存储
+* xUnit 测试
 
 ---
 
@@ -65,9 +66,22 @@ dotnet build TimeLab.slnx
 
 ---
 
+## 测试
+
+项目包含 `TimeLab.Tests` 测试项目，使用 xUnit 覆盖核心服务和 JSON 存储逻辑。
+
+运行全部测试：
+
+```powershell
+dotnet test TimeLab.slnx
+```
+
+---
+
 ## 项目结构
 
 * `TimeLab.App`：UI 层，包含 WPF View、ViewModel、Converter、主题和托盘交互
 * `TimeLab.Application`：应用服务层，包含任务服务和番茄钟服务
 * `TimeLab.Core`：领域模型层，包含任务、Session、计时器状态和模式
 * `TimeLab.Infrastructure`：数据存储层，使用 JSON 文件保存任务和专注记录
+* `TimeLab.Tests`：测试项目，验证 Application 服务和 Infrastructure 存储行为

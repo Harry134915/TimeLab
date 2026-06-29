@@ -3,4 +3,5 @@
   <Project Path="src/TimeLab.Application/TimeLab.Application.csproj" />
   <Project Path="src/TimeLab.Infrastructure/TimeLab.Infrastructure.csproj" />
   <Project Path="src/TimeLab.App/TimeLab.App.csproj" />
+  <Project Path="tests/TimeLab.Tests/TimeLab.Tests.csproj" />
 </Solution>

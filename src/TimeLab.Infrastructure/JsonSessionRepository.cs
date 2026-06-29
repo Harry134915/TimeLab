@@ -8,7 +8,12 @@ namespace TimeLab.Infrastructure;
 /// </summary>
 public class JsonSessionRepository : ISessionRepository
 {
-    private readonly JsonFileStore<PomodoroSession> _store = new("sessions.json");
+    private readonly JsonFileStore<PomodoroSession> _store;
+
+    public JsonSessionRepository(string? dataDir = null)
+    {
+        _store = new JsonFileStore<PomodoroSession>("sessions.json", dataDir);
+    }
 
     /// <summary>获取所有专注记录</summary>
     public async Task<IReadOnlyList<PomodoroSession>> GetAllAsync()

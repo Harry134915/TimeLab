@@ -8,7 +8,12 @@ namespace TimeLab.Infrastructure;
 /// </summary>
 public class JsonTaskRepository : ITaskRepository
 {
-    private readonly JsonFileStore<TaskItem> _store = new("tasks.json");
+    private readonly JsonFileStore<TaskItem> _store;
+
+    public JsonTaskRepository(string? dataDir = null)
+    {
+        _store = new JsonFileStore<TaskItem>("tasks.json", dataDir);
+    }
 
     /// <summary>获取所有任务</summary>
     public async Task<IReadOnlyList<TaskItem>> GetAllAsync()
