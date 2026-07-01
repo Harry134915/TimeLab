@@ -3,6 +3,9 @@ using TimeLab.Core;
 
 namespace TimeLab.Tests;
 
+/// <summary>
+/// TaskService 测试使用的内存仓储替身，避免测试读写真实 JSON 文件。
+/// </summary>
 internal sealed class InMemoryTaskRepository : ITaskRepository
 {
     public List<TaskItem> Items { get; } = [];
@@ -36,6 +39,9 @@ internal sealed class InMemoryTaskRepository : ITaskRepository
     }
 }
 
+/// <summary>
+/// PomodoroService 测试使用的内存仓储替身，用于捕获生成的 Session。
+/// </summary>
 internal sealed class InMemorySessionRepository : ISessionRepository
 {
     public List<PomodoroSession> Sessions { get; } = [];

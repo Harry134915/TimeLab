@@ -9,6 +9,9 @@ using Forms = System.Windows.Forms;
 
 namespace TimeLab.App;
 
+/// <summary>
+/// 主窗口，负责窗口生命周期、系统托盘、快捷键和主题切换等 UI 外壳行为。
+/// </summary>
 public partial class MainWindow : Window
 {
     private readonly Forms.NotifyIcon _notifyIcon;
@@ -26,6 +29,9 @@ public partial class MainWindow : Window
         ("TimerPanelBrush", "#F7F8FA", "#3D3D50"),
     ];
 
+    /// <summary>
+    /// 初始化主窗口、ViewModel、系统托盘和窗口生命周期事件。
+    /// </summary>
     public MainWindow()
     {
         InitializeComponent();
@@ -71,6 +77,9 @@ public partial class MainWindow : Window
 
     private bool _actuallyQuit;
 
+    /// <summary>
+    /// 默认关闭时隐藏到系统托盘，只有通过托盘“退出”才真正关闭应用。
+    /// </summary>
     protected override void OnClosing(CancelEventArgs e)
     {
         if (!_actuallyQuit)
@@ -82,6 +91,9 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    /// <summary>
+    /// 处理全局快捷键，输入框获得焦点时不拦截用户输入。
+    /// </summary>
     protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
     {
         base.OnPreviewKeyDown(e);
@@ -103,11 +115,17 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// 通过系统托盘展示计时到点提醒。
+    /// </summary>
     private void ShowBalloon(string message)
     {
         _notifyIcon.ShowBalloonTip(3000, "TimeLab 提醒", message, Forms.ToolTipIcon.Info);
     }
 
+    /// <summary>
+    /// 在浅色和深色资源之间做短动画过渡。
+    /// </summary>
     private void ToggleDarkMode()
     {
         _isDark = !_isDark;
@@ -163,12 +181,18 @@ public partial class MainWindow : Window
     private static WpfColor ParseColor(string hex) =>
         (WpfColor)WpfColorConverter.ConvertFromString(hex)!;
 
+    /// <summary>
+    /// 监听需要持久化的 ViewModel 状态变化。
+    /// </summary>
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.IsDarkMode))
             SaveSettings();
     }
 
+    /// <summary>
+    /// 启动时读取设置，并把深色模式偏好应用到当前窗口。
+    /// </summary>
     private void LoadAndApplySettings()
     {
         var settings = _settingsStore.Load();
@@ -176,6 +200,9 @@ public partial class MainWindow : Window
             _viewModel.IsDarkMode = true;
     }
 
+    /// <summary>
+    /// 保存当前可持久化的窗口设置。
+    /// </summary>
     private void SaveSettings()
     {
         _settingsStore.Save(new AppSettings

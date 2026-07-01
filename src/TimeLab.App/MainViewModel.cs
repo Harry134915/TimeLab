@@ -245,6 +245,9 @@ public class MainViewModel : INotifyPropertyChanged
         NewTaskDuration = string.Empty;
     }
 
+    /// <summary>
+    /// 显示应用内通知，并同步触发系统托盘提醒。
+    /// </summary>
     private void ShowNotification(string message)
     {
         NotificationMessage = message;
@@ -280,6 +283,9 @@ public class MainViewModel : INotifyPropertyChanged
         return fromTask > 0 ? Math.Min(fromPreset, fromTask) : fromPreset;
     }
 
+    /// <summary>
+    /// 根据当前计时模式和关联任务生成到时提醒文案。
+    /// </summary>
     private string TargetDescription()
     {
         // 循环模式的提示
@@ -323,6 +329,9 @@ public class MainViewModel : INotifyPropertyChanged
         return "";
     }
 
+    /// <summary>
+    /// 将任务输入区的时长文本按当前单位转换为秒；无效输入视为不设限。
+    /// </summary>
     private int ParseDuration()
     {
         if (string.IsNullOrWhiteSpace(NewTaskDuration) || !int.TryParse(NewTaskDuration, out var value))
@@ -374,6 +383,9 @@ public class MainViewModel : INotifyPropertyChanged
         SelectedTaskId = id;
     }
 
+    /// <summary>
+    /// 清除当前计时器关联的任务。
+    /// </summary>
     private void ClearSelectedTask()
     {
         SelectedTaskId = null;
@@ -496,6 +508,9 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 基于当前内存中的任务和 Session 刷新今日统计文本。
+    /// </summary>
     private void RefreshTodayStats()
     {
         var today = DateTime.Today;
@@ -519,6 +534,9 @@ public class MainViewModel : INotifyPropertyChanged
         await HandleTimerTargetAsync(state, elapsed);
     }
 
+    /// <summary>
+    /// 将领域层计时状态映射为界面显示文本。
+    /// </summary>
     private void RefreshStatusText(TimerState state)
     {
         StatusText = state.Status switch
@@ -531,6 +549,9 @@ public class MainViewModel : INotifyPropertyChanged
         };
     }
 
+    /// <summary>
+    /// 计算实时已用时长，运行中时补上当前计时片段。
+    /// </summary>
     private static TimeSpan GetCurrentElapsed(TimerState state)
     {
         var elapsed = state.ElapsedTime;
@@ -540,6 +561,9 @@ public class MainViewModel : INotifyPropertyChanged
         return elapsed;
     }
 
+    /// <summary>
+    /// 根据是否存在目标时长，刷新正计时或倒计时显示。
+    /// </summary>
     private void RefreshElapsedDisplay(TimeSpan elapsed)
     {
         if (_pomodoroService.TargetSeconds > 0)
@@ -553,6 +577,9 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 检查目标时长是否到达，并分派普通预设或循环模式的后续处理。
+    /// </summary>
     private async Task HandleTimerTargetAsync(TimerState state, TimeSpan elapsed)
     {
         if (state.Status != TimerStatus.Running || _alarmPlayed)
@@ -577,6 +604,9 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// 统一处理到时后的超时状态、界面通知和提示音。
+    /// </summary>
     private void NotifyTimerReachedTarget()
     {
         IsOvertime = true;
@@ -585,6 +615,9 @@ public class MainViewModel : INotifyPropertyChanged
         SystemSounds.Beep.Play();
     }
 
+    /// <summary>
+    /// 循环模式到时后记录当前阶段，并在还有下一阶段时自动启动。
+    /// </summary>
     private async Task HandleCycleTargetReachedAsync()
     {
         var session = await _pomodoroService.StopAsync();
@@ -608,6 +641,9 @@ public class MainViewModel : INotifyPropertyChanged
         UpdateTimerDisplay();
     }
 
+    /// <summary>
+    /// 通知与循环模式相关的绑定属性发生变化。
+    /// </summary>
     private void NotifyCycleChanged()
     {
         NotifyModeChanged();
@@ -615,6 +651,9 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(CycleProgress));
     }
 
+    /// <summary>
+    /// 通知与专注/休息模式相关的绑定属性发生变化。
+    /// </summary>
     private void NotifyModeChanged()
     {
         OnPropertyChanged(nameof(ModeName));
