@@ -5,18 +5,17 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WpfColor = System.Windows.Media.Color;
 using WpfColorConverter = System.Windows.Media.ColorConverter;
-using Forms = System.Windows.Forms;
 
 namespace TimeLab.App;
 
 /// <summary>
-/// 主窗口，负责窗口生命周期、系统托盘、快捷键和主题切换等 UI 外壳行为。
+/// 主窗口，负责窗口生命周期、快捷键和主题切换等 UI 外壳行为。
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly Forms.NotifyIcon _notifyIcon;
     private readonly MainViewModel _viewModel;
     private readonly SettingsStore _settingsStore = new();
+    private readonly TrayIconService _trayIconService;
     private bool _isDark;
     private DispatcherTimer? _fadeTimer;
 
@@ -30,7 +29,7 @@ public partial class MainWindow : Window
     ];
 
     /// <summary>
-    /// 初始化主窗口、ViewModel、系统托盘和窗口生命周期事件。
+    /// 初始化主窗口、ViewModel、系统托盘服务和窗口生命周期事件。
     /// </summary>
     public MainWindow()
     {
@@ -42,40 +41,36 @@ public partial class MainWindow : Window
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
-        _notifyIcon = new Forms.NotifyIcon
-        {
-            Text = "TimeLab",
-            Icon = System.Drawing.SystemIcons.Information,
-            Visible = true,
-            ContextMenuStrip = new Forms.ContextMenuStrip()
-        };
-        _notifyIcon.ContextMenuStrip.Items.Add("显示", null, (_, _) =>
-        {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        });
-        _notifyIcon.ContextMenuStrip.Items.Add("退出", null, (_, _) =>
-        {
-            _actuallyQuit = true;
-            Close();
-        });
-        _notifyIcon.DoubleClick += (_, _) =>
-        {
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-        };
+        _trayIconService = new TrayIconService(ShowFromTray, ExitFromTray);
 
         Loaded += async (_, _) =>
         {
             await _viewModel.LoadAsync();
             LoadAndApplySettings();
         };
-        Closed += (_, _) => _notifyIcon.Dispose();
+        Closed += (_, _) => _trayIconService.Dispose();
     }
 
     private bool _actuallyQuit;
+
+    /// <summary>
+    /// 响应托盘“显示”动作，恢复并激活主窗口。
+    /// </summary>
+    private void ShowFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    /// <summary>
+    /// 响应托盘“退出”动作，绕过隐藏到托盘逻辑并真正关闭应用。
+    /// </summary>
+    private void ExitFromTray()
+    {
+        _actuallyQuit = true;
+        Close();
+    }
 
     /// <summary>
     /// 默认关闭时隐藏到系统托盘，只有通过托盘“退出”才真正关闭应用。
@@ -120,7 +115,7 @@ public partial class MainWindow : Window
     /// </summary>
     private void ShowBalloon(string message)
     {
-        _notifyIcon.ShowBalloonTip(3000, "TimeLab 提醒", message, Forms.ToolTipIcon.Info);
+        _trayIconService.ShowBalloon(message);
     }
 
     /// <summary>

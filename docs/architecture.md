@@ -62,8 +62,9 @@ Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 
 负责 WPF 展示和用户交互：
 
-* `MainWindow`：主窗口、系统托盘、快捷键、主题切换和设置保存
+* `MainWindow`：主窗口生命周期、快捷键、主题切换和设置保存
 * `AppComposition`：集中创建 Repository、Service 和 `MainViewModel`
+* `TrayIconService`：系统托盘图标、托盘菜单和气泡提醒
 * `MainViewModel`：Todo、Timer、Session Log 的绑定状态和命令
 * Converter：时长显示、秒数显示、任务标题显示
 * XAML 样式：任务勾选框、开关、主题资源
