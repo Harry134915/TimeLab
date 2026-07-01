@@ -5,8 +5,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WpfColor = System.Windows.Media.Color;
 using WpfColorConverter = System.Windows.Media.ColorConverter;
-using TimeLab.Application;
-using TimeLab.Infrastructure;
 using Forms = System.Windows.Forms;
 
 namespace TimeLab.App;
@@ -32,12 +30,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        var taskRepo = new JsonTaskRepository();
-        var sessionRepo = new JsonSessionRepository();
-        var taskService = new TaskService(taskRepo);
-        var pomodoroService = new PomodoroService(sessionRepo);
-
-        var viewModel = new MainViewModel(taskService, pomodoroService, ShowBalloon, onToggleDark: ToggleDarkMode);
+        var viewModel = AppComposition.CreateMainViewModel(ShowBalloon, ToggleDarkMode);
         _viewModel = viewModel;
         DataContext = viewModel;
 
