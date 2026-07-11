@@ -18,33 +18,45 @@ public class JsonTaskRepository : ITaskRepository
     /// <summary>获取所有任务</summary>
     public async Task<IReadOnlyList<TaskItem>> GetAllAsync()
     {
-        var items = await _store.LoadAsync();
-        return items;
+        return await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var items = await _store.LoadAsync();
+            return (IReadOnlyList<TaskItem>)items;
+        });
     }
 
     /// <summary>添加新任务，写入 JSON 文件</summary>
     public async Task AddAsync(TaskItem item)
     {
-        var items = await _store.LoadAsync();
-        items.Add(item);
-        await _store.SaveAsync(items);
+        await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var items = await _store.LoadAsync();
+            items.Add(item);
+            await _store.SaveAsync(items);
+        });
     }
 
     /// <summary>更新任务，按 ID 匹配并替换</summary>
     public async Task UpdateAsync(TaskItem item)
     {
-        var items = await _store.LoadAsync();
-        var index = items.FindIndex(i => i.Id == item.Id);
-        if (index >= 0)
-            items[index] = item;
-        await _store.SaveAsync(items);
+        await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var items = await _store.LoadAsync();
+            var index = items.FindIndex(i => i.Id == item.Id);
+            if (index >= 0)
+                items[index] = item;
+            await _store.SaveAsync(items);
+        });
     }
 
     /// <summary>按 ID 删除任务</summary>
     public async Task DeleteAsync(Guid id)
     {
-        var items = await _store.LoadAsync();
-        items.RemoveAll(i => i.Id == id);
-        await _store.SaveAsync(items);
+        await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var items = await _store.LoadAsync();
+            items.RemoveAll(i => i.Id == id);
+            await _store.SaveAsync(items);
+        });
     }
 }

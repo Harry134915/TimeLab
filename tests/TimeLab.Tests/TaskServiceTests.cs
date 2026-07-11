@@ -1,4 +1,5 @@
 using TimeLab.Application;
+using TimeLab.Core;
 
 namespace TimeLab.Tests;
 
@@ -27,10 +28,28 @@ public class TaskServiceTests
         var service = new TaskService(repository);
         var item = await service.CreateAsync("Focus");
 
-        await service.CompleteAsync(item.Id);
+        var completedItem = await service.CompleteAsync(item.Id);
 
         Assert.True(item.IsCompleted);
         Assert.NotNull(item.CompletedAt);
+        Assert.Same(item, completedItem);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_WhenPersistenceFails_RestoresOriginalTaskState()
+    {
+        var item = new TaskItem
+        {
+            Id = Guid.NewGuid(),
+            Title = "保存失败后保持未完成",
+            CreatedAt = DateTime.Now
+        };
+        var service = new TaskService(new FailingUpdateTaskRepository(item));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CompleteAsync(item.Id));
+
+        Assert.False(item.IsCompleted);
+        Assert.Null(item.CompletedAt);
     }
 
     [Fact]
@@ -44,5 +63,18 @@ public class TaskServiceTests
 
         Assert.Empty(repository.Items);
         Assert.Contains(item.Id, repository.DeletedIds);
+    }
+
+    private sealed class FailingUpdateTaskRepository(TaskItem item) : ITaskRepository
+    {
+        public Task<IReadOnlyList<TaskItem>> GetAllAsync() =>
+            Task.FromResult<IReadOnlyList<TaskItem>>([item]);
+
+        public Task AddAsync(TaskItem newItem) => Task.CompletedTask;
+
+        public Task UpdateAsync(TaskItem updatedItem) =>
+            Task.FromException(new InvalidOperationException("无法保存"));
+
+        public Task DeleteAsync(Guid id) => Task.CompletedTask;
     }
 }

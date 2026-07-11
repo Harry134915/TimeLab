@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -17,15 +19,27 @@ public partial class MainWindow : Window
     private readonly SettingsStore _settingsStore = new();
     private readonly TrayIconService _trayIconService;
     private bool _isDark;
+    private bool _isExitInProgress;
     private DispatcherTimer? _fadeTimer;
 
     private static readonly (string key, string light, string dark)[] BgBrushes =
     [
-        ("CardBrush",       "#FFFFFF", "#2D2D3F"),
-        ("TextBrush",       "#2D3436", "#D4D4DC"),
-        ("MutedBrush",      "#B2BEC3", "#7A7A8A"),
-        ("BorderBrush",     "#E8ECF0", "#404058"),
-        ("TimerPanelBrush", "#F7F8FA", "#3D3D50"),
+        ("CardBrush",           "#FFFFFF", "#2D2D3F"),
+        ("TextBrush",           "#2D3436", "#F2F3F5"),
+        ("MutedBrush",          "#5F6B76", "#BBC1CB"),
+        ("BorderBrush",         "#84909C", "#777B91"),
+        ("CardBorderBrush",     "#D7DCE2", "#505267"),
+        ("TimerPanelBrush",     "#F5F7FA", "#383A4C"),
+        ("AccentTextBrush",     "#2F50C8", "#AFC0FF"),
+        ("SuccessBrush",        "#126B3E", "#70D6A2"),
+        ("StopTextBrush",       "#9E3B28", "#FF9F88"),
+        ("DangerTextBrush",     "#A61B13", "#FF8A80"),
+        ("WarningTextBrush",    "#8A5A00", "#FFD27A"),
+        ("SuccessSurfaceBrush", "#EDF9F2", "#223B31"),
+        ("DangerSurfaceBrush",  "#FFF1F0", "#442C32"),
+        ("WarningSurfaceBrush", "#FFF6DF", "#4A3A22"),
+        ("AccentSurfaceBrush",  "#EEF1FE", "#353B59"),
+        ("FocusBrush",          "#1D4ED8", "#F8FAFC"),
     ];
 
     /// <summary>
@@ -35,7 +49,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        var viewModel = AppComposition.CreateMainViewModel(ShowBalloon, ToggleDarkMode);
+        var viewModel = AppComposition.CreateMainViewModel(ShowBalloon, ToggleDarkMode, ConfirmDelete);
         _viewModel = viewModel;
         DataContext = viewModel;
 
@@ -66,10 +80,56 @@ public partial class MainWindow : Window
     /// <summary>
     /// 响应托盘“退出”动作，绕过隐藏到托盘逻辑并真正关闭应用。
     /// </summary>
-    private void ExitFromTray()
+    private async void ExitFromTray()
     {
-        _actuallyQuit = true;
-        Close();
+        if (_isExitInProgress)
+            return;
+
+        _isExitInProgress = true;
+        try
+        {
+            var saveActiveTimer = false;
+            if (_viewModel.IsTimerActive)
+            {
+                // 托盘菜单也可在窗口隐藏时触发；先显示窗口，确保确认框不会出现在后台。
+                ShowFromTray();
+                var result = System.Windows.MessageBox.Show(
+                    this,
+                    "当前计时仍在进行。\n\n是：保存本次记录并退出\n否：不保存本次记录并退出\n取消：继续计时，不退出",
+                    "退出 TimeLab",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question,
+                    MessageBoxResult.Cancel);
+
+                if (result == MessageBoxResult.Cancel)
+                    return;
+
+                saveActiveTimer = result == MessageBoxResult.Yes;
+            }
+
+            try
+            {
+                await _viewModel.PrepareForExitAsync(saveActiveTimer);
+            }
+            catch (Exception exception)
+            {
+                System.Windows.MessageBox.Show(
+                    this,
+                    $"本次记录保存失败，应用不会退出。\n计时状态已保留，可以稍后重试。\n\n{exception.Message}",
+                    "保存失败",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
+            _actuallyQuit = true;
+            Close();
+        }
+        finally
+        {
+            if (!_actuallyQuit)
+                _isExitInProgress = false;
+        }
     }
 
     /// <summary>
@@ -89,13 +149,18 @@ public partial class MainWindow : Window
     /// <summary>
     /// 处理全局快捷键，输入框获得焦点时不拦截用户输入。
     /// </summary>
-    protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+    protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
     {
-        base.OnPreviewKeyDown(e);
+        base.OnKeyDown(e);
         if (e.Handled) return;
 
-        // 焦点在输入框内时不拦截快捷键
-        if (Keyboard.FocusedElement is System.Windows.Controls.TextBox) return;
+        // 文本编辑和下拉选择优先保留标准键盘语义；其余未处理按键继续作为窗口快捷键。
+        if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase
+            or System.Windows.Controls.PasswordBox
+            or System.Windows.Controls.ComboBox)
+        {
+            return;
+        }
 
         switch (e.Key)
         {
@@ -118,6 +183,15 @@ public partial class MainWindow : Window
         _trayIconService.ShowBalloon(message);
     }
 
+    private bool ConfirmDelete(string message) =>
+        System.Windows.MessageBox.Show(
+            this,
+            message,
+            "确认删除",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) == MessageBoxResult.Yes;
+
     /// <summary>
     /// 在浅色和深色资源之间做短动画过渡。
     /// </summary>
@@ -127,8 +201,8 @@ public partial class MainWindow : Window
         _fadeTimer?.Stop();
 
         var resources = System.Windows.Application.Current.Resources;
-        var steps = 16;
-        var stepMs = 25; // 16 × 25 = 400ms
+        var steps = 10;
+        var stepMs = 20;
         var current = 0;
 
         // 起点
@@ -143,6 +217,14 @@ public partial class MainWindow : Window
                 ((SolidColorBrush)resources[key]).Color,
                 ParseColor(_isDark ? dark : light),
                 key);
+        }
+
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            Background = new SolidColorBrush(winTo);
+            foreach (var (_, to, key) in transitions)
+                resources[key] = new SolidColorBrush(to);
+            return;
         }
 
         _fadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(stepMs) };
@@ -183,6 +265,27 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.IsDarkMode))
             SaveSettings();
+
+        if (e.PropertyName == nameof(MainViewModel.StatusText))
+            RaiseLiveRegionChanged(TimerStatusText);
+        else if (e.PropertyName == nameof(MainViewModel.IsNotificationVisible) && _viewModel.IsNotificationVisible)
+            RaiseLiveRegionChanged(NotificationText);
+        else if (e.PropertyName == nameof(MainViewModel.NewTaskDurationError)
+                 && !string.IsNullOrEmpty(_viewModel.NewTaskDurationError))
+            RaiseLiveRegionChanged(TaskDurationErrorText);
+        else if (e.PropertyName == nameof(MainViewModel.CycleValidationMessage)
+                 && !string.IsNullOrEmpty(_viewModel.CycleValidationMessage))
+            RaiseLiveRegionChanged(CycleValidationText);
+    }
+
+    private void RaiseLiveRegionChanged(FrameworkElement element)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            var peer = UIElementAutomationPeer.FromElement(element)
+                ?? UIElementAutomationPeer.CreatePeerForElement(element);
+            peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        }, DispatcherPriority.Background);
     }
 
     /// <summary>

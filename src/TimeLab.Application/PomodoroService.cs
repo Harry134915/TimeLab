@@ -194,11 +194,10 @@ public class PomodoroService
             return null;
 
         var endTime = DateTime.Now;
-
+        var elapsedTime = _state.ElapsedTime;
         if (_state.Status == TimerStatus.Running)
-            _state.ElapsedTime += endTime - _state.StartTime!.Value;
+            elapsedTime += endTime - _state.StartTime!.Value;
 
-        _state.Status = TimerStatus.Stopped;
         var startTime = _sessionStartTime ?? _state.StartTime ?? endTime;
 
         var session = new PomodoroSession
@@ -207,18 +206,19 @@ public class PomodoroService
             TaskId = _currentTaskId,
             StartTime = startTime,
             EndTime = endTime,
-            Duration = _state.ElapsedTime,
+            Duration = elapsedTime,
             Note = note,
             Mode = CurrentMode
         };
 
+        await _repository.AddAsync(session);
+
+        _state.Status = TimerStatus.Stopped;
         _state.StartTime = null;
         _state.ElapsedTime = TimeSpan.Zero;
         _sessionStartTime = null;
         _currentTaskId = null;
         TargetSeconds = 0;
-
-        await _repository.AddAsync(session);
         return session;
     }
 }

@@ -20,9 +20,9 @@ public class TaskIdToTitleConverter : IMultiValueConverter
             return "";
 
         if (values[1] is not ObservableCollection<TaskItem> tasks)
-            return taskId.ToString();
+            return "已删除任务";
 
-        return tasks.FirstOrDefault(t => t.Id == taskId)?.Title ?? taskId.ToString();
+        return tasks.FirstOrDefault(t => t.Id == taskId)?.Title ?? "已删除任务";
     }
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)

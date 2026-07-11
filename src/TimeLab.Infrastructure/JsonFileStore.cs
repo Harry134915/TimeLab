@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace TimeLab.Infrastructure;
@@ -14,17 +15,46 @@ internal sealed class JsonFileStore<T>
 
     private readonly string _dataDir;
     private readonly string _filePath;
+    private readonly SemaphoreSlim _fileGate;
 
     /// <summary>
     /// 创建文件存储。未指定目录时使用用户本地 AppData/TimeLab 目录。
     /// </summary>
     public JsonFileStore(string fileName, string? dataDir = null)
     {
-        _dataDir = dataDir ?? Path.Combine(
+        var resolvedDataDir = dataDir ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TimeLab");
 
+        _dataDir = Path.GetFullPath(resolvedDataDir);
         _filePath = Path.Combine(_dataDir, fileName);
+        _fileGate = JsonFileGateRegistry.Get(_filePath);
+    }
+
+    public async Task<TResult> ExecuteExclusiveAsync<TResult>(Func<Task<TResult>> operation)
+    {
+        await _fileGate.WaitAsync();
+        try
+        {
+            return await operation();
+        }
+        finally
+        {
+            _fileGate.Release();
+        }
+    }
+
+    public async Task ExecuteExclusiveAsync(Func<Task> operation)
+    {
+        await _fileGate.WaitAsync();
+        try
+        {
+            await operation();
+        }
+        finally
+        {
+            _fileGate.Release();
+        }
     }
 
     /// <summary>
@@ -86,5 +116,16 @@ internal sealed class JsonFileStore<T>
             File.Delete(backupPath);
 
         File.Move(_filePath, backupPath);
+    }
+}
+
+internal static class JsonFileGateRegistry
+{
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+    public static SemaphoreSlim Get(string filePath)
+    {
+        return Gates.GetOrAdd(filePath, static _ => new SemaphoreSlim(1, 1));
     }
 }

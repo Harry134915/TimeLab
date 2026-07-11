@@ -42,6 +42,26 @@ public class JsonSessionRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task AddAsync_FromDifferentRepositoryInstances_PreservesEverySession()
+    {
+        const int sessionCount = 24;
+        var repositories = Enumerable.Range(0, sessionCount)
+            .Select(_ => new JsonSessionRepository(_dataDir))
+            .ToArray();
+        var sessions = Enumerable.Range(0, sessionCount)
+            .Select(_ => CreateSession())
+            .ToArray();
+
+        await Task.WhenAll(sessions.Select((session, index) => repositories[index].AddAsync(session)));
+
+        var saved = await new JsonSessionRepository(_dataDir).GetAllAsync();
+        Assert.Equal(sessionCount, saved.Count);
+        Assert.Equal(
+            sessions.Select(session => session.Id).OrderBy(id => id),
+            saved.Select(session => session.Id).OrderBy(id => id));
+    }
+
+    [Fact]
     public async Task DeleteAsync_RemovesSessionFromStorage()
     {
         var repository = new JsonSessionRepository(_dataDir);

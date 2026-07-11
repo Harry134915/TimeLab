@@ -27,7 +27,7 @@
                                 Height="22"
                                 CornerRadius="11"
                                 BorderThickness="2"
-                                BorderBrush="#B8B8B8"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 Background="Transparent"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -247,11 +247,11 @@
 
                             <Setter TargetName="Circle"
                                     Property="BorderBrush"
-                                    Value="#22C55E"/>
+                                    Value="{DynamicResource SuccessFillBrush}"/>
 
                             <Setter TargetName="Circle"
                                     Property="Background"
-                                    Value="#1122C55E"/>
+                                    Value="{DynamicResource SuccessSurfaceBrush}"/>
 
                         </Trigger>
 
@@ -262,11 +262,11 @@
 
                             <Setter TargetName="Circle"
                                     Property="Background"
-                                    Value="#22C55E"/>
+                                    Value="{DynamicResource SuccessFillBrush}"/>
 
                             <Setter TargetName="Circle"
                                     Property="BorderBrush"
-                                    Value="#22C55E"/>
+                                    Value="{DynamicResource SuccessFillBrush}"/>
 
                         </Trigger>
 

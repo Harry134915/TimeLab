@@ -60,6 +60,22 @@ public sealed class AsyncRelayCommand : ICommand
         }
     }
 
-    private void RaiseCanExecuteChanged() =>
-        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void RaiseCanExecuteChanged()
+    {
+        var handlers = CanExecuteChanged;
+        if (handlers is null)
+            return;
+
+        foreach (EventHandler handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler(this, EventArgs.Empty);
+            }
+            catch
+            {
+                // 状态监听器失败不应锁死或中断命令执行。
+            }
+        }
+    }
 }

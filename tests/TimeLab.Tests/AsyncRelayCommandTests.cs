@@ -67,4 +67,24 @@ public class AsyncRelayCommandTests
         Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal("boom", exception.Message);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ThrowingCanExecuteSubscriber_DoesNotLockCommand()
+    {
+        var executionCount = 0;
+        var command = new AsyncRelayCommand(
+            _ =>
+            {
+                executionCount++;
+                return Task.CompletedTask;
+            },
+            _ => { });
+        command.CanExecuteChanged += (_, _) => throw new InvalidOperationException("subscriber failed");
+
+        await command.ExecuteAsync(null);
+
+        Assert.Equal(1, executionCount);
+        Assert.False(command.IsExecuting);
+        Assert.True(command.CanExecute(null));
+    }
 }

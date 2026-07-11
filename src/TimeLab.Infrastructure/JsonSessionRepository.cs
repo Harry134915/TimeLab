@@ -18,23 +18,32 @@ public class JsonSessionRepository : ISessionRepository
     /// <summary>获取所有专注记录</summary>
     public async Task<IReadOnlyList<PomodoroSession>> GetAllAsync()
     {
-        var sessions = await _store.LoadAsync();
-        return sessions;
+        return await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var sessions = await _store.LoadAsync();
+            return (IReadOnlyList<PomodoroSession>)sessions;
+        });
     }
 
     /// <summary>添加新的专注记录，写入 JSON 文件</summary>
     public async Task AddAsync(PomodoroSession session)
     {
-        var sessions = await _store.LoadAsync();
-        sessions.Add(session);
-        await _store.SaveAsync(sessions);
+        await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var sessions = await _store.LoadAsync();
+            sessions.Add(session);
+            await _store.SaveAsync(sessions);
+        });
     }
 
     /// <summary>按 ID 删除专注记录</summary>
     public async Task DeleteAsync(Guid id)
     {
-        var sessions = await _store.LoadAsync();
-        sessions.RemoveAll(s => s.Id == id);
-        await _store.SaveAsync(sessions);
+        await _store.ExecuteExclusiveAsync(async () =>
+        {
+            var sessions = await _store.LoadAsync();
+            sessions.RemoveAll(s => s.Id == id);
+            await _store.SaveAsync(sessions);
+        });
     }
 }

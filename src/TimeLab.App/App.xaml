@@ -10,17 +10,28 @@
                 <ResourceDictionary Source="/Styles/ModernTaskCheckBoxStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <SolidColorBrush x:Key="PrimaryBrush" Color="#4A6CF7"/>
-            <SolidColorBrush x:Key="StopBrush" Color="#E17055"/>
-            <SolidColorBrush x:Key="SuccessBrush" Color="#27AE60"/>
-            <SolidColorBrush x:Key="DangerBrush" Color="#E74C3C"/>
-            <SolidColorBrush x:Key="DangerHoverBrush" Color="#D63031"/>
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#3659D9"/>
+            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#2948BD"/>
+            <SolidColorBrush x:Key="AccentTextBrush" Color="#2F50C8"/>
+            <SolidColorBrush x:Key="StopBrush" Color="#B5472D"/>
+            <SolidColorBrush x:Key="StopTextBrush" Color="#9E3B28"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#126B3E"/>
+            <SolidColorBrush x:Key="SuccessFillBrush" Color="#126B3E"/>
+            <SolidColorBrush x:Key="DangerBrush" Color="#B42318"/>
+            <SolidColorBrush x:Key="DangerTextBrush" Color="#A61B13"/>
+            <SolidColorBrush x:Key="DangerHoverBrush" Color="#8F1710"/>
+            <SolidColorBrush x:Key="WarningTextBrush" Color="#8A5A00"/>
             <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF"/>
             <SolidColorBrush x:Key="TextBrush" Color="#2D3436"/>
-            <SolidColorBrush x:Key="MutedBrush" Color="#B2BEC3"/>
-            <SolidColorBrush x:Key="BorderBrush" Color="#E8ECF0"/>
-            <SolidColorBrush x:Key="TimerPanelBrush" Color="#F7F8FA"/>
-            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#3B5DE7"/>
+            <SolidColorBrush x:Key="MutedBrush" Color="#5F6B76"/>
+            <SolidColorBrush x:Key="BorderBrush" Color="#84909C"/>
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#D7DCE2"/>
+            <SolidColorBrush x:Key="TimerPanelBrush" Color="#F5F7FA"/>
+            <SolidColorBrush x:Key="FocusBrush" Color="#1D4ED8"/>
+            <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#EDF9F2"/>
+            <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#FFF1F0"/>
+            <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#FFF6DF"/>
+            <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#EEF1FE"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

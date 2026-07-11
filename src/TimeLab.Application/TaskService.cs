@@ -36,18 +36,31 @@ public class TaskService
     }
 
     /// <summary>将指定任务标记为完成</summary>
-    public async Task CompleteAsync(Guid id)
+    public async Task<TaskItem?> CompleteAsync(Guid id)
     {
         var items = await _repository.GetAllAsync();
         var item = items.FirstOrDefault(i => i.Id == id);
 
         if (item is null)
-            return;
+            return null;
 
+        var wasCompleted = item.IsCompleted;
+        var previousCompletedAt = item.CompletedAt;
         item.IsCompleted = true;
         item.CompletedAt = DateTime.Now;
 
-        await _repository.UpdateAsync(item);
+        try
+        {
+            await _repository.UpdateAsync(item);
+        }
+        catch
+        {
+            item.IsCompleted = wasCompleted;
+            item.CompletedAt = previousCompletedAt;
+            throw;
+        }
+
+        return item;
     }
 
     /// <summary>按 ID 删除任务</summary>

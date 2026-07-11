@@ -38,6 +38,32 @@ public class JsonTaskRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task AddAsync_FromDifferentRepositoryInstances_PreservesEveryTask()
+    {
+        const int taskCount = 24;
+        var repositories = Enumerable.Range(0, taskCount)
+            .Select(_ => new JsonTaskRepository(_dataDir))
+            .ToArray();
+        var tasks = Enumerable.Range(0, taskCount)
+            .Select(index => new TimeLab.Core.TaskItem
+            {
+                Id = Guid.NewGuid(),
+                Title = $"Concurrent task {index}",
+                CreatedAt = DateTime.UtcNow,
+                PlannedSeconds = 300
+            })
+            .ToArray();
+
+        await Task.WhenAll(tasks.Select((item, index) => repositories[index].AddAsync(item)));
+
+        var saved = await new JsonTaskRepository(_dataDir).GetAllAsync();
+        Assert.Equal(taskCount, saved.Count);
+        Assert.Equal(
+            tasks.Select(item => item.Id).OrderBy(id => id),
+            saved.Select(item => item.Id).OrderBy(id => id));
+    }
+
+    [Fact]
     public async Task GetAllAsync_BacksUpCorruptedJsonAndReturnsEmptyList()
     {
         Directory.CreateDirectory(_dataDir);
