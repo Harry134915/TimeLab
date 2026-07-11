@@ -215,6 +215,8 @@ public class PomodoroService
         _state.StartTime = null;
         _state.ElapsedTime = TimeSpan.Zero;
         _sessionStartTime = null;
+        _currentTaskId = null;
+        TargetSeconds = 0;
 
         await _repository.AddAsync(session);
         return session;

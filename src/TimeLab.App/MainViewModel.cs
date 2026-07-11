@@ -17,35 +17,39 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly PomodoroService _pomodoroService;
     private readonly Action<string>? _onBalloon;
     private readonly Action? _onToggleDark;
+    private readonly Action _onTimerReached;
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
     private DispatcherTimer? _notificationTimer;
+    private bool _advanceModeOnTarget;
 
     public MainViewModel(TaskService taskService, PomodoroService pomodoroService,
-                         Action<string>? onBalloon = null, Action? onToggleDark = null)
+                         Action<string>? onBalloon = null, Action? onToggleDark = null,
+                         Action? onTimerReached = null)
     {
         _taskService = taskService;
         _pomodoroService = pomodoroService;
         _onBalloon = onBalloon;
         _onToggleDark = onToggleDark;
+        _onTimerReached = onTimerReached ?? SystemSounds.Beep.Play;
 
         // 每秒刷新计时显示
-        _tick.Tick += (_, _) => UpdateTimerDisplay();
+        _tick.Tick += async (_, _) => await HandleTimerTickAsync();
 
-        AddTaskCommand = new RelayCommand(async _ => await AddTaskAsync());
-        CompleteTaskCommand = new RelayCommand(async p => await CompleteTaskAsync((Guid)p!));
-        DeleteTaskCommand = new RelayCommand(async p => await DeleteTaskAsync((Guid)p!));
-        DeleteSessionCommand = new RelayCommand(async p => await DeleteSessionAsync((Guid)p!));
+        AddTaskCommand = new AsyncRelayCommand(_ => AddTaskAsync(), HandleCommandException);
+        CompleteTaskCommand = new AsyncRelayCommand(p => CompleteTaskAsync((Guid)p!), HandleCommandException);
+        DeleteTaskCommand = new AsyncRelayCommand(p => DeleteTaskAsync((Guid)p!), HandleCommandException);
+        DeleteSessionCommand = new AsyncRelayCommand(p => DeleteSessionAsync((Guid)p!), HandleCommandException);
         SelectTaskCommand = new RelayCommand(p => SelectTask((Guid)p!));
         ClearSelectedTaskCommand = new RelayCommand(_ => ClearSelectedTask());
-        StartTimerCommand = new RelayCommand(async _ => await StartTimerAsync());
-        PauseTimerCommand = new RelayCommand(async _ => await PauseTimerAsync());
-        StopTimerCommand = new RelayCommand(async _ => await StopTimerAsync());
-        ResetTimerCommand = new RelayCommand(async _ => await ResetTimerAsync());
-        ToggleTimerCommand = new RelayCommand(async _ => await ToggleTimerAsync());
-        StopOrResetCommand = new RelayCommand(async _ => await StopOrResetAsync());
-        StartPresetCommand = new RelayCommand(p => StartPreset((int)p!));
-        StartCycleCommand = new RelayCommand(async _ => await StartCycleAsync());
+        StartTimerCommand = new AsyncRelayCommand(_ => StartTimerAsync(), HandleCommandException);
+        PauseTimerCommand = new AsyncRelayCommand(_ => PauseTimerAsync(), HandleCommandException);
+        StopTimerCommand = new AsyncRelayCommand(_ => StopTimerAsync(), HandleCommandException);
+        ResetTimerCommand = new AsyncRelayCommand(_ => ResetTimerAsync(), HandleCommandException);
+        ToggleTimerCommand = new AsyncRelayCommand(_ => ToggleTimerAsync(), HandleCommandException);
+        StopOrResetCommand = new AsyncRelayCommand(_ => StopOrResetAsync(), HandleCommandException);
+        StartPresetCommand = new AsyncRelayCommand(p => StartPresetAsync((int)p!), HandleCommandException);
+        StartCycleCommand = new AsyncRelayCommand(_ => StartCycleAsync(), HandleCommandException);
     }
 
     /// <summary>任务列表</summary>
@@ -270,17 +274,19 @@ public class MainViewModel : INotifyPropertyChanged
         _notificationTimer?.Start();
     }
 
-    /// <summary>取预设时长和关联任务计划时长中有效的（取最小值，都无效返回0）</summary>
-    private int ResolveTargetSeconds()
+    /// <summary>获取当前关联任务的计划时长；未关联或未设时长时返回 0。</summary>
+    private int GetSelectedTaskTargetSeconds()
     {
-        var fromPreset = _pomodoroService.TargetSeconds;
-        if (fromPreset <= 0) return 0;
-
-        var fromTask = SelectedTaskId.HasValue
+        return SelectedTaskId.HasValue
             ? Tasks.FirstOrDefault(t => t.Id == SelectedTaskId.Value)?.PlannedSeconds ?? 0
             : 0;
+    }
 
-        return fromTask > 0 ? Math.Min(fromPreset, fromTask) : fromPreset;
+    /// <summary>预设和任务时长同时有效时取较小值。</summary>
+    private int ResolvePresetTargetSeconds(int presetSeconds)
+    {
+        var taskSeconds = GetSelectedTaskTargetSeconds();
+        return taskSeconds > 0 ? Math.Min(presetSeconds, taskSeconds) : presetSeconds;
     }
 
     /// <summary>
@@ -309,7 +315,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         // 普通预设模式
-        if (_pomodoroService.TargetSeconds > 0)
+        if (_advanceModeOnTarget)
         {
             return _pomodoroService.CurrentMode switch
             {
@@ -392,34 +398,38 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>开始计时（手动），暂停状态下恢复计时，停止后重新开始</summary>
-    private Task StartTimerAsync()
+    private async Task StartTimerAsync()
     {
         var status = _pomodoroService.CurrentState.Status;
         if (status == TimerStatus.Paused)
-            _pomodoroService.ResumeAsync();
+        {
+            await _pomodoroService.ResumeAsync();
+        }
         else
-            _pomodoroService.StartAsync(SelectedTaskId);
+        {
+            _advanceModeOnTarget = false;
+            await _pomodoroService.StartAsync(SelectedTaskId, GetSelectedTaskTargetSeconds());
+        }
         _alarmPlayed = false;
         IsOvertime = false;
         _tick.Stop();
         _tick.Start();
-        UpdateTimerDisplay();
-        return Task.CompletedTask;
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>按预设时长（分钟）开始计时</summary>
-    private Task StartPreset(int minutes)
+    private async Task StartPresetAsync(int minutes)
     {
         _pomodoroService.StopCycle();
         NotifyCycleChanged();
-        var seconds = minutes * 60;
-        _pomodoroService.StartAsync(SelectedTaskId, seconds);
+        _advanceModeOnTarget = true;
+        var seconds = ResolvePresetTargetSeconds(minutes * 60);
+        await _pomodoroService.StartAsync(SelectedTaskId, seconds);
         _alarmPlayed = false;
         IsOvertime = false;
         _tick.Stop();
         _tick.Start();
-        UpdateTimerDisplay();
-        return Task.CompletedTask;
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>开始循环模式</summary>
@@ -433,21 +443,21 @@ public class MainViewModel : INotifyPropertyChanged
             CycleBreakMinutes * 60,
             rounds,
             SelectedTaskId);
+        _advanceModeOnTarget = false;
         NotifyCycleChanged();
         _alarmPlayed = false;
         IsOvertime = false;
         _tick.Stop();
         _tick.Start();
-        UpdateTimerDisplay();
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>暂停计时</summary>
-    private Task PauseTimerAsync()
+    private async Task PauseTimerAsync()
     {
-        _pomodoroService.PauseAsync();
+        await _pomodoroService.PauseAsync();
         _tick.Stop();
-        UpdateTimerDisplay();
-        return Task.CompletedTask;
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>停止计时并生成专注记录</summary>
@@ -462,7 +472,8 @@ public class MainViewModel : INotifyPropertyChanged
             _pomodoroService.StopCycle();
             NotifyCycleChanged();
         }
-        UpdateTimerDisplay();
+        _advanceModeOnTarget = false;
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>清除计时器状态，不生成记录</summary>
@@ -472,9 +483,10 @@ public class MainViewModel : INotifyPropertyChanged
         _alarmPlayed = false;
         IsOvertime = false;
         _pomodoroService.StopCycle();
+        _advanceModeOnTarget = false;
         NotifyCycleChanged();
         await _pomodoroService.ResetAsync();
-        UpdateTimerDisplay();
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>Space 快捷键：空闲/暂停→开始，运行→暂停</summary>
@@ -522,7 +534,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>刷新计时器显示：状态文字、实时耗时、超时检测</summary>
-    private async void UpdateTimerDisplay()
+    internal async Task UpdateTimerDisplayAsync()
     {
         var state = _pomodoroService.CurrentState;
         RefreshStatusText(state);
@@ -532,6 +544,18 @@ public class MainViewModel : INotifyPropertyChanged
         RefreshElapsedDisplay(elapsed);
 
         await HandleTimerTargetAsync(state, elapsed);
+    }
+
+    private async Task HandleTimerTickAsync()
+    {
+        try
+        {
+            await UpdateTimerDisplayAsync();
+        }
+        catch (Exception exception)
+        {
+            HandleCommandException(exception);
+        }
     }
 
     /// <summary>
@@ -585,7 +609,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (state.Status != TimerStatus.Running || _alarmPlayed)
             return;
 
-        var targetSeconds = ResolveTargetSeconds();
+        var targetSeconds = _pomodoroService.TargetSeconds;
         if (targetSeconds <= 0 || elapsed.TotalSeconds < targetSeconds)
             return;
 
@@ -597,11 +621,7 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        if (_pomodoroService.TargetSeconds > 0)
-        {
-            _pomodoroService.AdvanceMode();
-            NotifyModeChanged();
-        }
+        await HandleSingleTargetReachedAsync();
     }
 
     /// <summary>
@@ -612,7 +632,28 @@ public class MainViewModel : INotifyPropertyChanged
         IsOvertime = true;
         _alarmPlayed = true;
         ShowNotification($"时间到！{TargetDescription()}");
-        SystemSounds.Beep.Play();
+        _onTimerReached();
+    }
+
+    /// <summary>
+    /// 普通预设或任务目标到时后，先按当前模式保存 Session，再按需切换模式。
+    /// </summary>
+    private async Task HandleSingleTargetReachedAsync()
+    {
+        _tick.Stop();
+        var session = await _pomodoroService.StopAsync();
+        if (session is not null)
+            Sessions.Add(session);
+
+        if (_advanceModeOnTarget)
+        {
+            _pomodoroService.AdvanceMode();
+            NotifyModeChanged();
+        }
+
+        _advanceModeOnTarget = false;
+        RefreshStatusText(_pomodoroService.CurrentState);
+        RefreshTodayStats();
     }
 
     /// <summary>
@@ -638,7 +679,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         _tick.Stop();
-        UpdateTimerDisplay();
+        await UpdateTimerDisplayAsync();
     }
 
     /// <summary>
@@ -660,6 +701,11 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ModeDefaultMinutes));
         OnPropertyChanged(nameof(CompletedFocusCount));
         OnPropertyChanged(nameof(PresetMinutes));
+    }
+
+    private void HandleCommandException(Exception exception)
+    {
+        ShowNotification($"操作失败：{exception.Message}");
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
