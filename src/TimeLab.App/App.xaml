@@ -12,6 +12,7 @@
 
             <SolidColorBrush x:Key="PrimaryBrush" Color="#3659D9"/>
             <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#2948BD"/>
+            <SolidColorBrush x:Key="ButtonForegroundBrush" Color="#FFFFFF"/>
             <SolidColorBrush x:Key="AccentTextBrush" Color="#2F50C8"/>
             <SolidColorBrush x:Key="StopBrush" Color="#B5472D"/>
             <SolidColorBrush x:Key="StopTextBrush" Color="#9E3B28"/>

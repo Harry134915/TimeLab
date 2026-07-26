@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using WpfColor = System.Windows.Media.Color;
 using WpfColorConverter = System.Windows.Media.ColorConverter;
+using WpfSystemColors = System.Windows.SystemColors;
 
 namespace TimeLab.App;
 
@@ -58,16 +59,35 @@ public partial class MainWindow : Window
         _viewModel.Timer.PropertyChanged += OnViewModelPropertyChanged;
 
         _trayIconService = new TrayIconService(ShowFromTray, ExitFromTray);
+        SystemParameters.StaticPropertyChanged += OnSystemParametersChanged;
 
         Loaded += async (_, _) =>
         {
             await _viewModel.LoadAsync();
             LoadAndApplySettings();
+            UpdateWorkspaceScrolling();
         };
-        Closed += (_, _) => _trayIconService.Dispose();
+        SizeChanged += (_, _) => UpdateWorkspaceScrolling();
+        Closed += (_, _) =>
+        {
+            SystemParameters.StaticPropertyChanged -= OnSystemParametersChanged;
+            _trayIconService.Dispose();
+        };
     }
 
     private bool _actuallyQuit;
+
+    private void UpdateWorkspaceScrolling()
+    {
+        WorkspaceScrollViewer.HorizontalScrollBarVisibility =
+            ActualWidth < 900
+                ? System.Windows.Controls.ScrollBarVisibility.Auto
+                : System.Windows.Controls.ScrollBarVisibility.Disabled;
+        WorkspaceScrollViewer.VerticalScrollBarVisibility =
+            ActualHeight < 620
+                ? System.Windows.Controls.ScrollBarVisibility.Auto
+                : System.Windows.Controls.ScrollBarVisibility.Disabled;
+    }
 
     /// <summary>
     /// 响应托盘“显示”动作，恢复并激活主窗口。
@@ -200,9 +220,28 @@ public partial class MainWindow : Window
     private void ToggleDarkMode()
     {
         _isDark = !_isDark;
+        ApplyCurrentTheme(animate: true);
+    }
+
+    private void ApplyCurrentTheme(bool animate)
+    {
         _fadeTimer?.Stop();
 
         var resources = System.Windows.Application.Current.Resources;
+        if (SystemParameters.HighContrast)
+        {
+            ApplyHighContrastResources(resources);
+            return;
+        }
+
+        resources["PrimaryBrush"] = new SolidColorBrush(ParseColor("#3659D9"));
+        resources["PrimaryHoverBrush"] = new SolidColorBrush(ParseColor("#2948BD"));
+        resources["ButtonForegroundBrush"] = new SolidColorBrush(ParseColor("#FFFFFF"));
+        resources["StopBrush"] = new SolidColorBrush(ParseColor("#B5472D"));
+        resources["SuccessFillBrush"] = new SolidColorBrush(ParseColor("#126B3E"));
+        resources["DangerBrush"] = new SolidColorBrush(ParseColor("#B42318"));
+        resources["DangerHoverBrush"] = new SolidColorBrush(ParseColor("#8F1710"));
+
         var steps = 10;
         var stepMs = 20;
         var current = 0;
@@ -221,7 +260,7 @@ public partial class MainWindow : Window
                 key);
         }
 
-        if (!SystemParameters.ClientAreaAnimation)
+        if (!animate || !SystemParameters.ClientAreaAnimation)
         {
             Background = new SolidColorBrush(winTo);
             foreach (var (_, to, key) in transitions)
@@ -249,6 +288,42 @@ public partial class MainWindow : Window
                 _fadeTimer?.Stop();
         };
         _fadeTimer.Start();
+    }
+
+    private void OnSystemParametersChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(SystemParameters.HighContrast))
+            return;
+
+        Dispatcher.InvokeAsync(() => ApplyCurrentTheme(animate: false));
+    }
+
+    private void ApplyHighContrastResources(ResourceDictionary resources)
+    {
+        Background = WpfSystemColors.WindowBrush;
+        resources["PrimaryBrush"] = WpfSystemColors.HighlightBrush;
+        resources["PrimaryHoverBrush"] = WpfSystemColors.HotTrackBrush;
+        resources["ButtonForegroundBrush"] = WpfSystemColors.HighlightTextBrush;
+        resources["CardBrush"] = WpfSystemColors.WindowBrush;
+        resources["TextBrush"] = WpfSystemColors.WindowTextBrush;
+        resources["MutedBrush"] = WpfSystemColors.GrayTextBrush;
+        resources["BorderBrush"] = WpfSystemColors.ActiveBorderBrush;
+        resources["CardBorderBrush"] = WpfSystemColors.ActiveBorderBrush;
+        resources["TimerPanelBrush"] = WpfSystemColors.ControlBrush;
+        resources["AccentTextBrush"] = WpfSystemColors.HotTrackBrush;
+        resources["SuccessBrush"] = WpfSystemColors.HighlightBrush;
+        resources["SuccessFillBrush"] = WpfSystemColors.HighlightBrush;
+        resources["StopBrush"] = WpfSystemColors.HighlightBrush;
+        resources["StopTextBrush"] = WpfSystemColors.WindowTextBrush;
+        resources["DangerBrush"] = WpfSystemColors.HighlightBrush;
+        resources["DangerTextBrush"] = WpfSystemColors.WindowTextBrush;
+        resources["DangerHoverBrush"] = WpfSystemColors.HotTrackBrush;
+        resources["WarningTextBrush"] = WpfSystemColors.WindowTextBrush;
+        resources["SuccessSurfaceBrush"] = WpfSystemColors.ControlBrush;
+        resources["DangerSurfaceBrush"] = WpfSystemColors.ControlBrush;
+        resources["WarningSurfaceBrush"] = WpfSystemColors.ControlBrush;
+        resources["AccentSurfaceBrush"] = WpfSystemColors.ControlBrush;
+        resources["FocusBrush"] = WpfSystemColors.HighlightBrush;
     }
 
     private static WpfColor Lerp(WpfColor a, WpfColor b, double t) =>
@@ -314,6 +389,8 @@ public partial class MainWindow : Window
         var settings = _settingsStore.Load();
         if (settings.IsDarkMode)
             _viewModel.IsDarkMode = true;
+        else
+            ApplyCurrentTheme(animate: false);
     }
 
     /// <summary>

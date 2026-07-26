@@ -54,10 +54,12 @@ Application 只依赖 Core，不关心具体 JSON 文件路径或 UI 展示。
 
 * `JsonTaskRepository`：使用 JSON 文件保存任务
 * `JsonSessionRepository`：使用 JSON 文件保存 Session
-* `JsonFileStore`：统一处理 JSON 读取、临时文件写入、备份和文件级并发保护
+* `JsonFileStore`：统一处理 JSON 读取、原子临时文件写入、崩溃恢复、备份和文件级并发保护
 * 数据目录位于用户本地应用数据目录下的 `TimeLab`
 * JSON 文件损坏时会备份损坏文件并返回空列表
-* 同一进程内针对相同文件的读写会串行执行，避免并发覆盖
+* 同一进程内使用信号量串行读写；Windows 独立进程之间使用命名互斥体保护同一文件
+* 进程在临时文件完成后异常退出时，下次读取会恢复较新的有效临时文件
+* 锁持有进程异常终止后，下一次操作会接管废弃互斥体并继续写入
 
 Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 
@@ -70,13 +72,16 @@ Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 * `TrayIconService`：系统托盘图标、托盘菜单和气泡提醒
 * `MainViewModel`：根协调器，负责主题、通知、分模块启动加载和退出流程
 * `TaskListViewModel`：任务集合、输入校验、任务选择、任务命令和任务写入队列
-* `TimerViewModel`：计时状态、循环模式、计时命令、Session 生成和保存失败恢复
+* `TimerViewModel`：计时区域的公开绑定、循环输入和 WPF 命令
+* `TimerWorkflow`：计时操作串行化、Tick 刷新、启动 / 暂停 / 停止 / 退出工作流
+* `TimerTargetCoordinator`：目标到达后的 Session 保存、模式推进和失败重试
+* `TimerPresentationState`：计时展示状态与时间、目标文案生成
 * `SessionLogViewModel`：专注记录、记录删除、写入队列和今日统计
 * `WorkspaceInteractionState`：发布任务写入、计时操作、Session 写入、活动计时和退出准备状态，统一刷新互斥命令
 * Converter：时长显示、秒数显示、任务标题显示
 * XAML 样式：任务勾选框、开关、主题资源
 
-功能 ViewModel 的依赖保持单向：`TimerViewModel` 读取 `TaskListViewModel` 的当前任务，并将生成的记录交给 `SessionLogViewModel`。根 ViewModel 不保留功能属性或命令的转发 API。
+功能 ViewModel 的依赖保持单向：计时工作流读取 `TaskListViewModel` 的当前任务，并将生成的记录交给 `SessionLogViewModel`。根 ViewModel 不保留功能属性或命令的转发 API。
 
 View 中不应编写核心业务规则，业务行为应优先放在 Application 服务中。
 

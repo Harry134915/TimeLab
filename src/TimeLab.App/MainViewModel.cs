@@ -10,11 +10,13 @@ public sealed class MainViewModel : ViewModelBase
     private readonly WorkspaceInteractionState _interactionState;
     private readonly Action<string>? _onBalloon;
     private readonly Action? _onToggleDark;
+    private readonly SemaphoreSlim _exitGate = new(1, 1);
     private DispatcherTimer? _notificationTimer;
     private string _notificationMessage = string.Empty;
     private bool _isNotificationVisible;
     private bool _isErrorNotification;
     private bool _isDarkMode;
+    private bool _isExitPrepared;
 
     internal MainViewModel(
         TaskListViewModel taskList,
@@ -104,20 +106,26 @@ public sealed class MainViewModel : ViewModelBase
     /// </summary>
     public async Task PrepareForExitAsync(bool saveActiveTimer)
     {
-        if (_interactionState.IsExitPreparationInProgress)
-            return;
-
-        _interactionState.SetExitPreparationInProgress(true);
+        await _exitGate.WaitAsync();
         try
         {
+            if (_isExitPrepared)
+                return;
+
+            _interactionState.SetExitPreparationInProgress(true);
             await TaskList.WaitForPendingOperationsAsync();
             await Timer.PrepareForExitAsync(saveActiveTimer);
             await SessionLog.WaitForPendingOperationsAsync();
+            _isExitPrepared = true;
         }
         catch
         {
             _interactionState.SetExitPreparationInProgress(false);
             throw;
+        }
+        finally
+        {
+            _exitGate.Release();
         }
     }
 

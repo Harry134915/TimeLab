@@ -265,6 +265,45 @@ public class MainViewModelTimerTests
         Assert.Single(viewModel.SessionLog.Sessions);
     }
 
+    [Fact]
+    public async Task PrepareForExitAsync_DiscardActiveTimer_StopsWithoutSaving()
+    {
+        var repository = new InMemorySessionRepository();
+        var pomodoroService = new PomodoroService(repository);
+        var viewModel = CreateViewModel(pomodoroService);
+
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
+        await viewModel.PrepareForExitAsync(saveActiveTimer: false);
+
+        Assert.Equal(TimerStatus.Idle, pomodoroService.CurrentState.Status);
+        Assert.False(viewModel.Timer.IsTimerActive);
+        Assert.Empty(repository.Sessions);
+        Assert.Empty(viewModel.SessionLog.Sessions);
+    }
+
+    [Fact]
+    public async Task PrepareForExitAsync_ConcurrentCallers_WaitForSameSave()
+    {
+        var repository = new DelayedSessionRepository();
+        var pomodoroService = new PomodoroService(repository);
+        var viewModel = CreateViewModel(pomodoroService);
+
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
+        var firstExit = viewModel.PrepareForExitAsync(saveActiveTimer: true);
+        await repository.AddStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var secondExit = viewModel.PrepareForExitAsync(saveActiveTimer: true);
+
+        Assert.False(firstExit.IsCompleted);
+        Assert.False(secondExit.IsCompleted);
+
+        repository.AllowAddToComplete.TrySetResult();
+        await Task.WhenAll(firstExit, secondExit);
+
+        Assert.Single(repository.Sessions);
+        Assert.Single(viewModel.SessionLog.Sessions);
+        Assert.Equal(TimerStatus.Stopped, pomodoroService.CurrentState.Status);
+    }
+
     private static MainViewModel CreateViewModel(PomodoroService pomodoroService) =>
         ViewModelTestFactory.Create(pomodoroService);
 

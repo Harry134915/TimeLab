@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:TimeLab.App"
         mc:Ignorable="d"
         Title="番茄钟" Height="640" Width="1000"
-        MinHeight="600" MinWidth="900"
+        MinHeight="480" MinWidth="640"
         Icon="/Assets/Idol.jpg"
         Background="#F0F2F5"
         FontFamily="Microsoft YaHei UI"
@@ -74,7 +74,7 @@
             <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}"/>
         </Style>
 
         <!-- 次要按钮：浅灰底边框 -->
@@ -90,7 +90,7 @@
             <Setter Property="Background" Value="{DynamicResource StopBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource StopBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}"/>
         </Style>
 
         <!-- 文字按钮：纯文字无背景 -->
@@ -246,7 +246,11 @@
     </Window.Resources>
 
     <Grid>
-        <Grid Margin="14">
+        <ScrollViewer x:Name="WorkspaceScrollViewer"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Disabled"
+                      AutomationProperties.Name="TimeLab 工作区">
+        <Grid Margin="14" MinWidth="860" MinHeight="540">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="5*" MinWidth="430"/>
                 <ColumnDefinition Width="8"/>
@@ -883,6 +887,7 @@
                 </Border>
             </Grid>
         </Grid>
+        </ScrollViewer>
 
         <!-- 通知条 -->
         <Border CornerRadius="6" Panel.ZIndex="10"
@@ -904,7 +909,7 @@
                 </Style>
             </Border.Style>
             <TextBlock x:Name="NotificationText" Text="{Binding NotificationMessage}" FontSize="14"
-                       Foreground="White" FontWeight="SemiBold"
+                       Foreground="{DynamicResource ButtonForegroundBrush}" FontWeight="SemiBold"
                        HorizontalAlignment="Center" TextWrapping="Wrap"
                        TextAlignment="Center"
                        AutomationProperties.LiveSetting="Assertive"/>
