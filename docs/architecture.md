@@ -17,10 +17,11 @@
 * App → Application, Infrastructure
 * Application → Core
 * Infrastructure → Application, Core
-* Tests → Application, Core, Infrastructure
+* Tests → App, Application, Core, Infrastructure
 * Core → 无依赖
 
-这些依赖方向符合当前项目规则。Core 不依赖任何其他层。
+生产代码的依赖方向符合当前项目规则。Core 不依赖任何其他层。
+Tests 引用 App 是为了验证 ViewModel、命令和 Converter，不会启动真实 WPF 窗口。
 
 ---
 
@@ -53,8 +54,10 @@ Application 只依赖 Core，不关心具体 JSON 文件路径或 UI 展示。
 
 * `JsonTaskRepository`：使用 JSON 文件保存任务
 * `JsonSessionRepository`：使用 JSON 文件保存 Session
+* `JsonFileStore`：统一处理 JSON 读取、临时文件写入、备份和文件级并发保护
 * 数据目录位于用户本地应用数据目录下的 `TimeLab`
 * JSON 文件损坏时会备份损坏文件并返回空列表
+* 同一进程内针对相同文件的读写会串行执行，避免并发覆盖
 
 Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 
@@ -62,10 +65,10 @@ Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 
 负责 WPF 展示和用户交互：
 
-* `MainWindow`：主窗口生命周期、快捷键、主题切换和设置保存
+* `MainWindow`：主窗口生命周期、快捷键、主题切换、退出确认和设置保存
 * `AppComposition`：集中创建 Repository、Service 和 `MainViewModel`
 * `TrayIconService`：系统托盘图标、托盘菜单和气泡提醒
-* `MainViewModel`：Todo、Timer、Session Log 的绑定状态和命令
+* `MainViewModel`：Todo、Timer、Session Log 的绑定状态、命令和异步操作协调
 * Converter：时长显示、秒数显示、任务标题显示
 * XAML 样式：任务勾选框、开关、主题资源
 
@@ -75,9 +78,12 @@ View 中不应编写核心业务规则，业务行为应优先放在 Application
 
 验证核心服务和存储行为：
 
-* `TaskServiceTests`：验证任务创建、完成和删除
+* `TaskServiceTests`：验证任务创建、完成、删除和保存失败恢复
 * `PomodoroServiceTests`：验证计时开始、暂停、继续和 Session 生成
-* `JsonTaskRepositoryTests`：验证 JSON 文件不存在、保存读取和损坏备份
+* `JsonTaskRepositoryTests`、`JsonSessionRepositoryTests`：验证 JSON 读写、损坏备份和并发操作
+* `MainViewModelTimerTests`、`MainViewModelInteractionTests`：验证计时状态、核心专注流程和命令状态
+* `TaskMutationGateTests`、`TimerPersistenceRecoveryTests`：验证异步操作串行化、退出等待和保存失败重试
+* Converter 与命令测试：验证显示转换和异步命令行为
 * 测试使用临时目录，不写入真实用户数据目录
 
-Tests 可以依赖 Application、Core 和 Infrastructure，但不应依赖 App 或启动 WPF UI。
+Tests 可以依赖全部项目，但 App 层测试应以 ViewModel、命令和 Converter 为主，不启动真实 WPF 窗口。

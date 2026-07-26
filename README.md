@@ -34,6 +34,8 @@ TimeLab 是一个简单的本地时间管理工具，用于管理任务、进行
 * 专注 / 短休 / 长休模式
 * 循环番茄模式，可设置专注时长、休息时长和轮数
 * 到时提醒和提示音
+* 保存失败后暂停并支持重试
+* 活动计时退出时支持保存、放弃或取消退出
 
 ### Session Log
 
@@ -47,6 +49,7 @@ TimeLab 是一个简单的本地时间管理工具，用于管理任务、进行
 * 现代化 WPF 界面
 * 浅色 / 深色模式切换，并保存设置
 * 系统托盘显示和提醒
+* 表单验证、空状态、键盘焦点和动态状态播报
 * 快捷键：
   * Space：开始 / 暂停
   * Esc：停止 / 清除
@@ -68,7 +71,9 @@ dotnet build TimeLab.slnx
 
 ## 测试
 
-项目包含 `TimeLab.Tests` 测试项目，使用 xUnit 覆盖核心服务和 JSON 存储逻辑。
+项目包含 `TimeLab.Tests` 测试项目，使用 xUnit 覆盖核心服务、ViewModel 交互、JSON 存储、并发写入和失败恢复逻辑。
+
+当前共有 55 个自动化测试用例。
 
 运行全部测试：
 
@@ -84,4 +89,4 @@ dotnet test TimeLab.slnx
 * `TimeLab.Application`：应用服务层，包含任务服务和番茄钟服务
 * `TimeLab.Core`：领域模型层，包含任务、Session、计时器状态和模式
 * `TimeLab.Infrastructure`：数据存储层，使用 JSON 文件保存任务和专注记录
-* `TimeLab.Tests`：测试项目，验证 Application 服务和 Infrastructure 存储行为
+* `TimeLab.Tests`：测试项目，验证 App 交互、Application 服务和 Infrastructure 存储行为
