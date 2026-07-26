@@ -66,11 +66,17 @@ Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 负责 WPF 展示和用户交互：
 
 * `MainWindow`：主窗口生命周期、快捷键、主题切换、退出确认和设置保存
-* `AppComposition`：集中创建 Repository、Service 和 `MainViewModel`
+* `AppComposition`：集中创建 Repository、Service、共享交互状态、三个功能 ViewModel 和根 ViewModel
 * `TrayIconService`：系统托盘图标、托盘菜单和气泡提醒
-* `MainViewModel`：Todo、Timer、Session Log 的绑定状态、命令和异步操作协调
+* `MainViewModel`：根协调器，负责主题、通知、分模块启动加载和退出流程
+* `TaskListViewModel`：任务集合、输入校验、任务选择、任务命令和任务写入队列
+* `TimerViewModel`：计时状态、循环模式、计时命令、Session 生成和保存失败恢复
+* `SessionLogViewModel`：专注记录、记录删除、写入队列和今日统计
+* `WorkspaceInteractionState`：发布任务写入、计时操作、Session 写入、活动计时和退出准备状态，统一刷新互斥命令
 * Converter：时长显示、秒数显示、任务标题显示
 * XAML 样式：任务勾选框、开关、主题资源
+
+功能 ViewModel 的依赖保持单向：`TimerViewModel` 读取 `TaskListViewModel` 的当前任务，并将生成的记录交给 `SessionLogViewModel`。根 ViewModel 不保留功能属性或命令的转发 API。
 
 View 中不应编写核心业务规则，业务行为应优先放在 Application 服务中。
 
@@ -83,6 +89,7 @@ View 中不应编写核心业务规则，业务行为应优先放在 Application
 * `JsonTaskRepositoryTests`、`JsonSessionRepositoryTests`：验证 JSON 读写、损坏备份和并发操作
 * `MainViewModelTimerTests`、`MainViewModelInteractionTests`：验证计时状态、核心专注流程和命令状态
 * `TaskMutationGateTests`、`TimerPersistenceRecoveryTests`：验证异步操作串行化、退出等待和保存失败重试
+* `ViewModelCoordinationTests`：验证分模块加载、共享命令互斥和退出失败后的命令恢复
 * Converter 与命令测试：验证显示转换和异步命令行为
 * 测试使用临时目录，不写入真实用户数据目录
 

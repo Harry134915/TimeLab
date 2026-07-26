@@ -73,7 +73,7 @@ dotnet build TimeLab.slnx
 
 项目包含 `TimeLab.Tests` 测试项目，使用 xUnit 覆盖核心服务、ViewModel 交互、JSON 存储、并发写入和失败恢复逻辑。
 
-当前共有 55 个自动化测试用例。
+当前共有 58 个自动化测试用例。
 
 运行全部测试：
 
@@ -85,7 +85,7 @@ dotnet test TimeLab.slnx
 
 ## 项目结构
 
-* `TimeLab.App`：UI 层，包含 WPF View、ViewModel、Converter、主题和托盘交互
+* `TimeLab.App`：UI 层，包含 WPF View、根协调器、任务 / 计时 / 记录子 ViewModel、Converter、主题和托盘交互
 * `TimeLab.Application`：应用服务层，包含任务服务和番茄钟服务
 * `TimeLab.Core`：领域模型层，包含任务、Session、计时器状态和模式
 * `TimeLab.Infrastructure`：数据存储层，使用 JSON 文件保存任务和专注记录

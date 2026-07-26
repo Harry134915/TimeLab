@@ -54,6 +54,8 @@ public partial class MainWindow : Window
         DataContext = viewModel;
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.TaskList.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.Timer.PropertyChanged += OnViewModelPropertyChanged;
 
         _trayIconService = new TrayIconService(ShowFromTray, ExitFromTray);
 
@@ -89,7 +91,7 @@ public partial class MainWindow : Window
         try
         {
             var saveActiveTimer = false;
-            if (_viewModel.IsTimerActive)
+            if (_viewModel.Timer.IsTimerActive)
             {
                 // 托盘菜单也可在窗口隐藏时触发；先显示窗口，确保确认框不会出现在后台。
                 ShowFromTray();
@@ -165,11 +167,11 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.Space:
-                _viewModel.ToggleTimerCommand.Execute(null);
+                _viewModel.Timer.ToggleTimerCommand.Execute(null);
                 e.Handled = true;
                 break;
             case Key.Escape:
-                _viewModel.StopOrResetCommand.Execute(null);
+                _viewModel.Timer.StopOrResetCommand.Execute(null);
                 e.Handled = true;
                 break;
         }
@@ -263,19 +265,35 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainViewModel.IsDarkMode))
+        if (sender == _viewModel
+            && e.PropertyName == nameof(MainViewModel.IsDarkMode))
+        {
             SaveSettings();
+        }
 
-        if (e.PropertyName == nameof(MainViewModel.StatusText))
+        if (sender == _viewModel.Timer
+            && e.PropertyName == nameof(TimerViewModel.StatusText))
+        {
             RaiseLiveRegionChanged(TimerStatusText);
-        else if (e.PropertyName == nameof(MainViewModel.IsNotificationVisible) && _viewModel.IsNotificationVisible)
+        }
+        else if (sender == _viewModel
+                 && e.PropertyName == nameof(MainViewModel.IsNotificationVisible)
+                 && _viewModel.IsNotificationVisible)
+        {
             RaiseLiveRegionChanged(NotificationText);
-        else if (e.PropertyName == nameof(MainViewModel.NewTaskDurationError)
-                 && !string.IsNullOrEmpty(_viewModel.NewTaskDurationError))
+        }
+        else if (sender == _viewModel.TaskList
+                 && e.PropertyName == nameof(TaskListViewModel.NewTaskDurationError)
+                 && !string.IsNullOrEmpty(_viewModel.TaskList.NewTaskDurationError))
+        {
             RaiseLiveRegionChanged(TaskDurationErrorText);
-        else if (e.PropertyName == nameof(MainViewModel.CycleValidationMessage)
-                 && !string.IsNullOrEmpty(_viewModel.CycleValidationMessage))
+        }
+        else if (sender == _viewModel.Timer
+                 && e.PropertyName == nameof(TimerViewModel.CycleValidationMessage)
+                 && !string.IsNullOrEmpty(_viewModel.Timer.CycleValidationMessage))
+        {
             RaiseLiveRegionChanged(CycleValidationText);
+        }
     }
 
     private void RaiseLiveRegionChanged(FrameworkElement element)

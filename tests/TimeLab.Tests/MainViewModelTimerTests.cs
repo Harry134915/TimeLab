@@ -14,16 +14,16 @@ public class MainViewModelTimerTests
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-61);
 
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         var session = Assert.Single(repository.Sessions);
         Assert.Equal(FocusMode.Focus, session.Mode);
         Assert.Equal(FocusMode.ShortBreak, pomodoroService.CurrentMode);
         Assert.Equal(TimerStatus.Stopped, pomodoroService.CurrentState.Status);
-        Assert.Same(session, Assert.Single(viewModel.Sessions));
+        Assert.Same(session, Assert.Single(viewModel.SessionLog.Sessions));
     }
 
     [Fact]
@@ -33,22 +33,22 @@ public class MainViewModelTimerTests
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-61);
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Equal(FocusMode.ShortBreak, pomodoroService.CurrentMode);
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
         Assert.Equal(FocusMode.ShortBreak, pomodoroService.CurrentMode);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-61);
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Equal(2, repository.Sessions.Count);
         Assert.Equal(FocusMode.Focus, repository.Sessions[0].Mode);
         Assert.Equal(FocusMode.ShortBreak, repository.Sessions[1].Mode);
         Assert.Equal(FocusMode.Focus, pomodoroService.CurrentMode);
-        Assert.StartsWith("今日 1 次", viewModel.TodayStats);
+        Assert.StartsWith("今日 1 次", viewModel.SessionLog.TodayStats);
     }
 
     [Fact]
@@ -58,15 +58,15 @@ public class MainViewModelTimerTests
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-61);
-        await viewModel.UpdateTimerDisplayAsync();
-        await ExecuteAsync(viewModel.ResetTimerCommand);
+        await viewModel.Timer.UpdateTimerDisplayAsync();
+        await ExecuteAsync(viewModel.Timer.ResetTimerCommand);
 
         Assert.Equal(FocusMode.Focus, pomodoroService.CurrentMode);
         Assert.Equal(0, pomodoroService.CompletedFocusCount);
         Assert.Equal(TimerStatus.Idle, pomodoroService.CurrentState.Status);
-        Assert.Contains(25, viewModel.PresetMinutes);
+        Assert.Contains(25, viewModel.Timer.PresetMinutes);
     }
 
     [Fact]
@@ -81,21 +81,21 @@ public class MainViewModelTimerTests
             Title = "关联专注任务",
             PlannedSeconds = 30
         };
-        viewModel.Tasks.Add(task);
-        viewModel.SelectedTaskId = task.Id;
+        viewModel.TaskList.Tasks.Add(task);
+        viewModel.TaskList.SelectedTaskId = task.Id;
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-31);
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Equal(FocusMode.ShortBreak, pomodoroService.CurrentMode);
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
 
         Assert.Equal(FocusMode.ShortBreak, pomodoroService.CurrentMode);
         Assert.Equal(5 * 60, pomodoroService.TargetSeconds);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-(5 * 60 + 1));
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Equal(2, repository.Sessions.Count);
         Assert.Equal(task.Id, repository.Sessions[0].TaskId);
@@ -114,9 +114,9 @@ public class MainViewModelTimerTests
         pomodoroService.CurrentState.StartTime = null;
         pomodoroService.CurrentState.ElapsedTime = TimeSpan.FromMilliseconds(200);
 
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
-        Assert.Equal("00:01:00", viewModel.ElapsedDisplay);
+        Assert.Equal("00:01:00", viewModel.Timer.ElapsedDisplay);
     }
 
     [Fact]
@@ -124,21 +124,20 @@ public class MainViewModelTimerTests
     {
         var repository = new InMemorySessionRepository();
         var pomodoroService = new PomodoroService(repository);
-        var taskService = new TaskService(new InMemoryTaskRepository());
-        var viewModel = new MainViewModel(
-            taskService,
+        var viewModel = ViewModelTestFactory.Create(
             pomodoroService,
-            onBalloon: _ => throw new InvalidOperationException("托盘不可用"),
-            onTimerReached: () => throw new InvalidOperationException("声音不可用"));
+            new TaskService(new InMemoryTaskRepository()),
+            onTimerReached: () => throw new InvalidOperationException("声音不可用"),
+            onBalloon: _ => throw new InvalidOperationException("托盘不可用"));
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-61);
 
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Single(repository.Sessions);
         Assert.Equal(TimerStatus.Stopped, pomodoroService.CurrentState.Status);
-        Assert.True(viewModel.IsTargetReached);
+        Assert.True(viewModel.Timer.IsTargetReached);
     }
 
     [Fact]
@@ -153,15 +152,15 @@ public class MainViewModelTimerTests
             Title = "编写测试",
             PlannedSeconds = 30
         };
-        viewModel.Tasks.Add(task);
-        viewModel.SelectedTaskId = task.Id;
+        viewModel.TaskList.Tasks.Add(task);
+        viewModel.TaskList.SelectedTaskId = task.Id;
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
 
         Assert.Equal(task.PlannedSeconds, pomodoroService.TargetSeconds);
 
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-31);
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         var session = Assert.Single(repository.Sessions);
         Assert.Equal(task.Id, session.TaskId);
@@ -177,14 +176,14 @@ public class MainViewModelTimerTests
         var repository = new InMemorySessionRepository();
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
-        viewModel.CycleFocusMinutes = 1;
-        viewModel.CycleBreakMinutes = 1;
-        viewModel.CycleTotalRoundsText = "2";
+        viewModel.Timer.CycleFocusMinutes = 1;
+        viewModel.Timer.CycleBreakMinutes = 1;
+        viewModel.Timer.CycleTotalRoundsText = "2";
 
-        await ExecuteAsync(viewModel.StartCycleCommand);
+        await ExecuteAsync(viewModel.Timer.StartCycleCommand);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-61);
 
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         var session = Assert.Single(repository.Sessions);
         Assert.Equal(FocusMode.Focus, session.Mode);
@@ -198,63 +197,64 @@ public class MainViewModelTimerTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task SaveActiveSessionForExitAsync_RunningOrPausedTimer_SavesAndStops(bool pauseFirst)
+    public async Task PrepareForExitAsync_RunningOrPausedTimer_SavesAndStops(bool pauseFirst)
     {
         var repository = new InMemorySessionRepository();
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
         if (pauseFirst)
-            await ExecuteAsync(viewModel.PauseTimerCommand);
+            await ExecuteAsync(viewModel.Timer.PauseTimerCommand);
 
-        await viewModel.SaveActiveSessionForExitAsync();
+        await viewModel.PrepareForExitAsync(saveActiveTimer: true);
 
         var session = Assert.Single(repository.Sessions);
-        Assert.Same(session, Assert.Single(viewModel.Sessions));
+        Assert.Same(session, Assert.Single(viewModel.SessionLog.Sessions));
         Assert.Equal(TimerStatus.Stopped, pomodoroService.CurrentState.Status);
-        Assert.False(viewModel.IsTimerActive);
+        Assert.False(viewModel.Timer.IsTimerActive);
     }
 
     [Fact]
-    public async Task SaveActiveSessionForExitAsync_SaveFails_KeepsRetryableTimerState()
+    public async Task PrepareForExitAsync_SaveFails_KeepsRetryableTimerState()
     {
         var repository = new FailOnceSessionRepository();
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
 
-        await ExecuteAsync(viewModel.StartPresetCommand, 1);
+        await ExecuteAsync(viewModel.Timer.StartPresetCommand, 1);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(viewModel.SaveActiveSessionForExitAsync);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => viewModel.PrepareForExitAsync(saveActiveTimer: true));
 
         Assert.Equal(TimerStatus.Paused, pomodoroService.CurrentState.Status);
         Assert.Null(pomodoroService.CurrentState.StartTime);
         Assert.True(pomodoroService.CurrentState.ElapsedTime > TimeSpan.Zero);
         Assert.Equal(60, pomodoroService.TargetSeconds);
-        Assert.True(viewModel.IsTimerActive);
-        Assert.True(viewModel.StopTimerCommand.CanExecute(null));
-        Assert.Empty(viewModel.Sessions);
+        Assert.True(viewModel.Timer.IsTimerActive);
+        Assert.True(viewModel.Timer.StopTimerCommand.CanExecute(null));
+        Assert.Empty(viewModel.SessionLog.Sessions);
 
-        await viewModel.SaveActiveSessionForExitAsync();
+        await viewModel.PrepareForExitAsync(saveActiveTimer: true);
 
         Assert.Equal(TimerStatus.Stopped, pomodoroService.CurrentState.Status);
-        Assert.False(viewModel.IsTimerActive);
+        Assert.False(viewModel.Timer.IsTimerActive);
         Assert.Single(repository.Sessions);
-        Assert.Single(viewModel.Sessions);
+        Assert.Single(viewModel.SessionLog.Sessions);
     }
 
     [Fact]
-    public async Task SaveActiveSessionForExitAsync_WaitsForInFlightStopWithoutDuplicateSession()
+    public async Task PrepareForExitAsync_WaitsForInFlightStopWithoutDuplicateSession()
     {
         var repository = new DelayedSessionRepository();
         var pomodoroService = new PomodoroService(repository);
         var viewModel = CreateViewModel(pomodoroService);
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
-        var stopTask = ExecuteAsync(viewModel.StopTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
+        var stopTask = ExecuteAsync(viewModel.Timer.StopTimerCommand);
         await repository.AddStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        var exitSaveTask = viewModel.SaveActiveSessionForExitAsync();
+        var exitSaveTask = viewModel.PrepareForExitAsync(saveActiveTimer: true);
         Assert.False(exitSaveTask.IsCompleted);
 
         repository.AllowAddToComplete.TrySetResult();
@@ -262,22 +262,14 @@ public class MainViewModelTimerTests
 
         Assert.Equal(TimerStatus.Stopped, pomodoroService.CurrentState.Status);
         Assert.Single(repository.Sessions);
-        Assert.Single(viewModel.Sessions);
+        Assert.Single(viewModel.SessionLog.Sessions);
     }
 
-    private static MainViewModel CreateViewModel(PomodoroService pomodoroService)
-    {
-        var taskService = new TaskService(new InMemoryTaskRepository());
-        return new MainViewModel(
-            taskService,
-            pomodoroService,
-            onTimerReached: () => { });
-    }
+    private static MainViewModel CreateViewModel(PomodoroService pomodoroService) =>
+        ViewModelTestFactory.Create(pomodoroService);
 
-    private static Task ExecuteAsync(ICommand command, object? parameter = null)
-    {
-        return Assert.IsType<AsyncRelayCommand>(command).ExecuteAsync(parameter);
-    }
+    private static Task ExecuteAsync(ICommand command, object? parameter = null) =>
+        Assert.IsType<AsyncRelayCommand>(command).ExecuteAsync(parameter);
 
     private sealed class FailOnceSessionRepository : ISessionRepository
     {

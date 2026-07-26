@@ -20,12 +20,28 @@ public static class AppComposition
         var sessionRepository = new JsonSessionRepository();
         var taskService = new TaskService(taskRepository);
         var pomodoroService = new PomodoroService(sessionRepository);
+        var interactionState = new WorkspaceInteractionState();
+        var taskList = new TaskListViewModel(
+            taskService,
+            interactionState,
+            onConfirmDelete);
+        var sessionLog = new SessionLogViewModel(
+            pomodoroService,
+            taskList,
+            interactionState,
+            onConfirmDelete);
+        var timer = new TimerViewModel(
+            pomodoroService,
+            taskList,
+            sessionLog,
+            interactionState);
 
         return new MainViewModel(
-            taskService,
-            pomodoroService,
+            taskList,
+            timer,
+            sessionLog,
+            interactionState,
             onBalloon,
-            onToggleDark,
-            onConfirmDelete);
+            onToggleDark);
     }
 }

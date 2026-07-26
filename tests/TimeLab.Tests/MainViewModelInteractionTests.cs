@@ -12,15 +12,15 @@ public class MainViewModelInteractionTests
     {
         var viewModel = CreateViewModel();
         var statusChanges = 0;
-        viewModel.PropertyChanged += (_, args) =>
+        viewModel.Timer.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(MainViewModel.StatusText))
+            if (args.PropertyName == nameof(TimerViewModel.StatusText))
                 statusChanges++;
         };
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
 
-        Assert.Equal("运行中", viewModel.StatusText);
+        Assert.Equal("运行中", viewModel.Timer.StatusText);
         Assert.Equal(1, statusChanges);
     }
 
@@ -29,32 +29,32 @@ public class MainViewModelInteractionTests
     {
         var viewModel = CreateViewModel();
         var taskId = Guid.NewGuid();
-        viewModel.Tasks.Add(new TaskItem
+        viewModel.TaskList.Tasks.Add(new TaskItem
         {
             Id = taskId,
             Title = "可关联任务"
         });
 
-        Assert.True(viewModel.StartTimerCommand.CanExecute(null));
-        Assert.False(viewModel.PauseTimerCommand.CanExecute(null));
-        Assert.False(viewModel.StopTimerCommand.CanExecute(null));
-        Assert.True(viewModel.SelectTaskCommand.CanExecute(taskId));
+        Assert.True(viewModel.Timer.StartTimerCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.PauseTimerCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.StopTimerCommand.CanExecute(null));
+        Assert.True(viewModel.TaskList.SelectTaskCommand.CanExecute(taskId));
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
 
-        Assert.False(viewModel.StartTimerCommand.CanExecute(null));
-        Assert.False(viewModel.StartCycleCommand.CanExecute(null));
-        Assert.False(viewModel.SelectTaskCommand.CanExecute(taskId));
-        Assert.False(viewModel.ResetTimerCommand.CanExecute(null));
-        Assert.True(viewModel.PauseTimerCommand.CanExecute(null));
-        Assert.True(viewModel.StopTimerCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.StartTimerCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.StartCycleCommand.CanExecute(null));
+        Assert.False(viewModel.TaskList.SelectTaskCommand.CanExecute(taskId));
+        Assert.False(viewModel.Timer.ResetTimerCommand.CanExecute(null));
+        Assert.True(viewModel.Timer.PauseTimerCommand.CanExecute(null));
+        Assert.True(viewModel.Timer.StopTimerCommand.CanExecute(null));
 
-        await ExecuteAsync(viewModel.PauseTimerCommand);
+        await ExecuteAsync(viewModel.Timer.PauseTimerCommand);
 
-        Assert.Equal("继续", viewModel.StartButtonText);
-        Assert.True(viewModel.StartTimerCommand.CanExecute(null));
-        Assert.False(viewModel.PauseTimerCommand.CanExecute(null));
-        Assert.True(viewModel.StopTimerCommand.CanExecute(null));
+        Assert.Equal("继续", viewModel.Timer.StartButtonText);
+        Assert.True(viewModel.Timer.StartTimerCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.PauseTimerCommand.CanExecute(null));
+        Assert.True(viewModel.Timer.StopTimerCommand.CanExecute(null));
     }
 
     [Theory]
@@ -66,24 +66,24 @@ public class MainViewModelInteractionTests
         string invalidDuration)
     {
         var viewModel = CreateViewModel();
-        viewModel.NewTaskTitle = "编写回归测试";
+        viewModel.TaskList.NewTaskTitle = "编写回归测试";
 
-        viewModel.NewTaskDuration = invalidDuration;
+        viewModel.TaskList.NewTaskDuration = invalidDuration;
 
-        Assert.False(viewModel.AddTaskCommand.CanExecute(null));
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.NewTaskDurationError));
+        Assert.False(viewModel.TaskList.AddTaskCommand.CanExecute(null));
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.TaskList.NewTaskDurationError));
     }
 
     [Fact]
     public void AddTaskCommand_PositiveIntegerDuration_IsEnabledWithoutError()
     {
         var viewModel = CreateViewModel();
-        viewModel.NewTaskTitle = "编写回归测试";
+        viewModel.TaskList.NewTaskTitle = "编写回归测试";
 
-        viewModel.NewTaskDuration = "25";
+        viewModel.TaskList.NewTaskDuration = "25";
 
-        Assert.True(viewModel.AddTaskCommand.CanExecute(null));
-        Assert.True(string.IsNullOrEmpty(viewModel.NewTaskDurationError));
+        Assert.True(viewModel.TaskList.AddTaskCommand.CanExecute(null));
+        Assert.True(string.IsNullOrEmpty(viewModel.TaskList.NewTaskDurationError));
     }
 
     [Fact]
@@ -97,9 +97,9 @@ public class MainViewModelInteractionTests
         var viewModel = CreateViewModel(sessionRepository: sessionRepository);
 
         await viewModel.LoadAsync();
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
-        Assert.Equal("今日 1 次 · 25 分钟 · 0 个任务", viewModel.TodayStats);
+        Assert.Equal("今日 1 次 · 25 分钟 · 0 个任务", viewModel.SessionLog.TodayStats);
     }
 
     [Fact]
@@ -114,13 +114,13 @@ public class MainViewModelInteractionTests
             Title = "整理审查结果",
             PlannedSeconds = 1
         };
-        viewModel.Tasks.Add(task);
-        viewModel.SelectedTaskId = task.Id;
+        viewModel.TaskList.Tasks.Add(task);
+        viewModel.TaskList.SelectedTaskId = task.Id;
 
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-2);
 
-        await viewModel.UpdateTimerDisplayAsync();
+        await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Contains("本次专注完成", viewModel.NotificationMessage);
         Assert.DoesNotContain("任务已完成", viewModel.NotificationMessage);
@@ -136,23 +136,23 @@ public class MainViewModelInteractionTests
             pomodoroService,
             sessionRepository,
             taskRepository);
-        viewModel.NewTaskTitle = "完成 UI 审查";
-        viewModel.NewTaskDuration = "2";
-        viewModel.DurationUnitIndex = 1;
+        viewModel.TaskList.NewTaskTitle = "完成 UI 审查";
+        viewModel.TaskList.NewTaskDuration = "2";
+        viewModel.TaskList.DurationUnitIndex = 1;
 
-        await ExecuteAsync(viewModel.AddTaskCommand);
+        await ExecuteAsync(viewModel.TaskList.AddTaskCommand);
 
-        var task = Assert.Single(viewModel.Tasks);
-        viewModel.SelectTaskCommand.Execute(task.Id);
-        await ExecuteAsync(viewModel.StartTimerCommand);
+        var task = Assert.Single(viewModel.TaskList.Tasks);
+        viewModel.TaskList.SelectTaskCommand.Execute(task.Id);
+        await ExecuteAsync(viewModel.Timer.StartTimerCommand);
         pomodoroService.CurrentState.StartTime = DateTime.Now.AddSeconds(-65);
-        await ExecuteAsync(viewModel.StopTimerCommand);
+        await ExecuteAsync(viewModel.Timer.StopTimerCommand);
 
         var session = Assert.Single(sessionRepository.Sessions);
         Assert.Equal(task.Id, session.TaskId);
         Assert.Equal(FocusMode.Focus, session.Mode);
-        Assert.Single(viewModel.Sessions);
-        Assert.Contains("今日 1 次 · 1 分钟", viewModel.TodayStats);
+        Assert.Single(viewModel.SessionLog.Sessions);
+        Assert.Contains("今日 1 次 · 1 分钟", viewModel.SessionLog.TodayStats);
     }
 
     [Fact]
@@ -164,11 +164,11 @@ public class MainViewModelInteractionTests
             Id = Guid.NewGuid(),
             Title = "不要误删"
         };
-        viewModel.Tasks.Add(task);
+        viewModel.TaskList.Tasks.Add(task);
 
-        await ExecuteAsync(viewModel.DeleteTaskCommand, task.Id);
+        await ExecuteAsync(viewModel.TaskList.DeleteTaskCommand, task.Id);
 
-        Assert.Contains(task, viewModel.Tasks);
+        Assert.Contains(task, viewModel.TaskList.Tasks);
     }
 
     private static MainViewModel CreateViewModel(
@@ -177,16 +177,19 @@ public class MainViewModelInteractionTests
         InMemoryTaskRepository? taskRepository = null,
         Func<string, bool>? onConfirmDelete = null)
     {
-        pomodoroService ??= new PomodoroService(sessionRepository ?? new InMemorySessionRepository());
+        pomodoroService ??= new PomodoroService(
+            sessionRepository ?? new InMemorySessionRepository());
         var taskService = new TaskService(taskRepository ?? new InMemoryTaskRepository());
-        return new MainViewModel(
-            taskService,
+        return ViewModelTestFactory.Create(
             pomodoroService,
-            onConfirmDelete: onConfirmDelete,
-            onTimerReached: () => { });
+            taskService,
+            onConfirmDelete);
     }
 
-    private static PomodoroSession CreateSession(FocusMode mode, int minutes, DateTime startTime)
+    private static PomodoroSession CreateSession(
+        FocusMode mode,
+        int minutes,
+        DateTime startTime)
     {
         return new PomodoroSession
         {
@@ -198,8 +201,6 @@ public class MainViewModelInteractionTests
         };
     }
 
-    private static Task ExecuteAsync(ICommand command, object? parameter = null)
-    {
-        return Assert.IsType<AsyncRelayCommand>(command).ExecuteAsync(parameter);
-    }
+    private static Task ExecuteAsync(ICommand command, object? parameter = null) =>
+        Assert.IsType<AsyncRelayCommand>(command).ExecuteAsync(parameter);
 }

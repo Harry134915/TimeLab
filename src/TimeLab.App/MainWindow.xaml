@@ -254,7 +254,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- 左侧：任务列表 -->
-            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}"
+                    DataContext="{Binding TaskList}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -435,7 +436,8 @@
                 </Grid.RowDefinitions>
 
                 <!-- 番茄钟卡片 -->
-                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12"
+                        DataContext="{Binding Timer}">
                     <StackPanel>
                         <!-- 标题栏 -->
                         <Grid Margin="0,0,0,10">
@@ -446,7 +448,7 @@
                                        Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
                             <CheckBox HorizontalAlignment="Right" VerticalAlignment="Center"
-                                IsChecked="{Binding IsDarkMode}"
+                                IsChecked="{Binding DataContext.IsDarkMode, RelativeSource={RelativeSource AncestorType=Window}}"
                                 Style="{StaticResource GorgeousSwitch}"
                                 FocusVisualStyle="{StaticResource AccessibleFocusVisualStyle}"
                                 AutomationProperties.Name="切换深色模式"
@@ -669,18 +671,19 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,14">
                             <TextBlock Text="关联：" Foreground="{DynamicResource MutedBrush}"
                                    VerticalAlignment="Center" FontSize="12"/>
-                            <TextBlock Text="{Binding SelectedTaskTitle}" VerticalAlignment="Center"
+                            <TextBlock Text="{Binding DataContext.TaskList.SelectedTaskTitle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                   VerticalAlignment="Center"
                                    Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold"
                                    Margin="4,0" FontSize="12" MaxWidth="180"
                                    TextTrimming="CharacterEllipsis"/>
                             <Button Content="清除关联"
-                                Command="{Binding ClearSelectedTaskCommand}"
+                                Command="{Binding DataContext.TaskList.ClearSelectedTaskCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                 AutomationProperties.Name="清除计时器关联任务"
                                 FontSize="11" Padding="6,2">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource LinkButtonStyle}">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SelectedTaskId}" Value="{x:Null}">
+                                            <DataTrigger Binding="{Binding DataContext.TaskList.SelectedTaskId, RelativeSource={RelativeSource AncestorType=Window}}" Value="{x:Null}">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -709,7 +712,8 @@
                 </Border>
 
                 <!-- Session Log 卡片 -->
-                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}"
+                        DataContext="{Binding SessionLog}">
                     <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -852,8 +856,8 @@
                                                     <TextBlock.Text>
                                                         <MultiBinding Converter="{StaticResource TaskIdConverter}">
                                                             <Binding Path="TaskId"/>
-                                                            <Binding Path="DataContext.Tasks" RelativeSource="{RelativeSource AncestorType=ListView}"/>
-                                                            <Binding Path="DataContext.Tasks.Count" RelativeSource="{RelativeSource AncestorType=ListView}"/>
+                                                            <Binding Path="DataContext.TaskList.Tasks" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                            <Binding Path="DataContext.TaskList.Tasks.Count" RelativeSource="{RelativeSource AncestorType=Window}"/>
                                                         </MultiBinding>
                                                     </TextBlock.Text>
                                                     <TextBlock.Style>

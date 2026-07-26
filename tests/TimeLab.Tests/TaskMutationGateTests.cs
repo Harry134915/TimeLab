@@ -18,38 +18,37 @@ public class TaskMutationGateTests
             PlannedSeconds = 60
         };
         var repository = new BlockingTaskRepository(task);
-        var viewModel = new MainViewModel(
-            new TaskService(repository),
+        var viewModel = ViewModelTestFactory.Create(
             new PomodoroService(new InMemorySessionRepository()),
-            onConfirmDelete: _ => true,
-            onTimerReached: () => { });
+            new TaskService(repository),
+            onConfirmDelete: _ => true);
         await viewModel.LoadAsync();
-        viewModel.SelectedTaskId = task.Id;
-        viewModel.NewTaskTitle = "另一个任务";
-        Assert.True(viewModel.AddTaskCommand.CanExecute(null));
+        viewModel.TaskList.SelectedTaskId = task.Id;
+        viewModel.TaskList.NewTaskTitle = "另一个任务";
+        Assert.True(viewModel.TaskList.AddTaskCommand.CanExecute(null));
 
-        var completionTask = ExecuteAsync(viewModel.CompleteTaskCommand, task.Id);
+        var completionTask = ExecuteAsync(viewModel.TaskList.CompleteTaskCommand, task.Id);
         await repository.UpdateStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.False(viewModel.AddTaskCommand.CanExecute(null));
-        Assert.False(viewModel.CompleteTaskCommand.CanExecute(task.Id));
-        Assert.False(viewModel.DeleteTaskCommand.CanExecute(task.Id));
-        Assert.False(viewModel.SelectTaskCommand.CanExecute(task.Id));
-        Assert.False(viewModel.ClearSelectedTaskCommand.CanExecute(null));
-        Assert.False(viewModel.StartTimerCommand.CanExecute(null));
-        Assert.False(viewModel.StartPresetCommand.CanExecute(25));
-        Assert.False(viewModel.StartCycleCommand.CanExecute(null));
-        Assert.False(viewModel.ToggleTimerCommand.CanExecute(null));
+        Assert.False(viewModel.TaskList.AddTaskCommand.CanExecute(null));
+        Assert.False(viewModel.TaskList.CompleteTaskCommand.CanExecute(task.Id));
+        Assert.False(viewModel.TaskList.DeleteTaskCommand.CanExecute(task.Id));
+        Assert.False(viewModel.TaskList.SelectTaskCommand.CanExecute(task.Id));
+        Assert.False(viewModel.TaskList.ClearSelectedTaskCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.StartTimerCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.StartPresetCommand.CanExecute(25));
+        Assert.False(viewModel.Timer.StartCycleCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.ToggleTimerCommand.CanExecute(null));
 
-        await ExecuteAsync(viewModel.DeleteTaskCommand, task.Id);
+        await ExecuteAsync(viewModel.TaskList.DeleteTaskCommand, task.Id);
         Assert.Equal(0, repository.DeleteCalls);
 
         repository.AllowUpdate.TrySetResult();
         await completionTask;
 
-        Assert.True(Assert.Single(viewModel.Tasks).IsCompleted);
-        Assert.Null(viewModel.SelectedTaskId);
-        Assert.True(viewModel.DeleteTaskCommand.CanExecute(task.Id));
+        Assert.True(Assert.Single(viewModel.TaskList.Tasks).IsCompleted);
+        Assert.Null(viewModel.TaskList.SelectedTaskId);
+        Assert.True(viewModel.TaskList.DeleteTaskCommand.CanExecute(task.Id));
     }
 
     [Fact]
@@ -63,24 +62,23 @@ public class TaskMutationGateTests
             PlannedSeconds = 60
         };
         var repository = new BlockingTaskRepository(task);
-        var viewModel = new MainViewModel(
-            new TaskService(repository),
+        var viewModel = ViewModelTestFactory.Create(
             new PomodoroService(new InMemorySessionRepository()),
-            onTimerReached: () => { });
+            new TaskService(repository));
         await viewModel.LoadAsync();
 
-        var completionTask = ExecuteAsync(viewModel.CompleteTaskCommand, task.Id);
+        var completionTask = ExecuteAsync(viewModel.TaskList.CompleteTaskCommand, task.Id);
         await repository.UpdateStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         var exitTask = viewModel.PrepareForExitAsync(saveActiveTimer: false);
         Assert.False(exitTask.IsCompleted);
-        Assert.False(viewModel.AddTaskCommand.CanExecute(null));
-        Assert.False(viewModel.StartTimerCommand.CanExecute(null));
+        Assert.False(viewModel.TaskList.AddTaskCommand.CanExecute(null));
+        Assert.False(viewModel.Timer.StartTimerCommand.CanExecute(null));
 
         repository.AllowUpdate.TrySetResult();
         await Task.WhenAll(completionTask, exitTask);
 
-        Assert.True(Assert.Single(viewModel.Tasks).IsCompleted);
+        Assert.True(Assert.Single(viewModel.TaskList.Tasks).IsCompleted);
     }
 
     [Fact]
@@ -94,25 +92,24 @@ public class TaskMutationGateTests
             Mode = FocusMode.Focus
         };
         var repository = new BlockingSessionRepository(session);
-        var viewModel = new MainViewModel(
-            new TaskService(new InMemoryTaskRepository()),
+        var viewModel = ViewModelTestFactory.Create(
             new PomodoroService(repository),
-            onConfirmDelete: _ => true,
-            onTimerReached: () => { });
+            new TaskService(new InMemoryTaskRepository()),
+            onConfirmDelete: _ => true);
         await viewModel.LoadAsync();
 
-        var deleteTask = ExecuteAsync(viewModel.DeleteSessionCommand, session.Id);
+        var deleteTask = ExecuteAsync(viewModel.SessionLog.DeleteSessionCommand, session.Id);
         await repository.DeleteStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         var exitTask = viewModel.PrepareForExitAsync(saveActiveTimer: false);
         Assert.False(exitTask.IsCompleted);
-        Assert.False(viewModel.DeleteSessionCommand.CanExecute(session.Id));
-        Assert.False(viewModel.CanEditTimerSetup);
+        Assert.False(viewModel.SessionLog.DeleteSessionCommand.CanExecute(session.Id));
+        Assert.False(viewModel.Timer.CanEditTimerSetup);
 
         repository.AllowDelete.TrySetResult();
         await Task.WhenAll(deleteTask, exitTask);
 
-        Assert.Empty(viewModel.Sessions);
+        Assert.Empty(viewModel.SessionLog.Sessions);
         Assert.Empty(repository.Sessions);
     }
 
