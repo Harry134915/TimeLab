@@ -67,9 +67,13 @@ Infrastructure 依赖 Application 的仓储接口和 Core 的模型。
 
 负责 WPF 展示和用户交互：
 
-* `MainWindow`：主窗口生命周期、快捷键、主题切换、退出确认和设置保存
+* `MainWindow`：窗口装配、响应式滚动、快捷键和具体控件的状态播报路由
 * `AppComposition`：集中创建 Repository、Service、共享交互状态、三个功能 ViewModel 和根 ViewModel
 * `TrayIconService`：系统托盘图标、托盘菜单和气泡提醒
+* `WindowLifecycleCoordinator`：系统托盘显示、窗口隐藏、退出防重入和活动计时退出协调
+* `WindowDialogService`：删除确认、活动计时退出选择和保存失败提示
+* `ThemeManager`：深浅色资源、切换动画、高对比度适配和主题设置持久化
+* `LiveRegionAnnouncer`：统一发布 Windows UI Automation Live Region 事件
 * `MainViewModel`：根协调器，负责主题、通知、分模块启动加载和退出流程
 * `TaskListViewModel`：任务集合、输入校验、任务选择、任务命令和任务写入队列
 * `TimerViewModel`：计时区域的公开绑定、循环输入和 WPF 命令
