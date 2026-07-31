@@ -8,6 +8,22 @@ namespace TimeLab.Tests;
 public class MainViewModelInteractionTests
 {
     [Fact]
+    public void SessionLogNavigation_ShowsRecordsAndReturnsToWorkspace()
+    {
+        var viewModel = CreateViewModel();
+
+        Assert.False(viewModel.IsSessionLogViewVisible);
+
+        viewModel.ShowSessionLogCommand.Execute(null);
+
+        Assert.True(viewModel.IsSessionLogViewVisible);
+
+        viewModel.BackToWorkspaceCommand.Execute(null);
+
+        Assert.False(viewModel.IsSessionLogViewVisible);
+    }
+
+    [Fact]
     public async Task StartTimer_RaisesStatusChangeOnlyOnceForRunningState()
     {
         var viewModel = CreateViewModel();
@@ -100,6 +116,44 @@ public class MainViewModelInteractionTests
         await viewModel.Timer.UpdateTimerDisplayAsync();
 
         Assert.Equal("今日 1 次 · 25 分钟 · 0 个任务", viewModel.SessionLog.TodayStats);
+        Assert.Equal(1, viewModel.SessionLog.TodayFocusCount);
+        Assert.Equal(25, viewModel.SessionLog.TodayFocusMinutes);
+        Assert.Equal(0, viewModel.SessionLog.TodayCompletedTaskCount);
+    }
+
+    [Fact]
+    public async Task ClearSessions_WhenConfirmed_RemovesAllRecords()
+    {
+        var sessionRepository = new InMemorySessionRepository();
+        sessionRepository.Sessions.Add(CreateSession(FocusMode.Focus, 25, DateTime.Today.AddHours(9)));
+        sessionRepository.Sessions.Add(CreateSession(FocusMode.ShortBreak, 5, DateTime.Today.AddHours(10)));
+        var viewModel = CreateViewModel(
+            sessionRepository: sessionRepository,
+            onConfirmDelete: _ => true);
+        await viewModel.LoadAsync();
+
+        await ExecuteAsync(viewModel.SessionLog.ClearSessionsCommand);
+
+        Assert.Empty(viewModel.SessionLog.Sessions);
+        Assert.Empty(sessionRepository.Sessions);
+        Assert.False(viewModel.SessionLog.ClearSessionsCommand.CanExecute(null));
+        Assert.Equal("已清空全部专注记录", viewModel.NotificationMessage);
+    }
+
+    [Fact]
+    public async Task ClearSessions_WhenConfirmationIsDeclined_KeepsRecords()
+    {
+        var sessionRepository = new InMemorySessionRepository();
+        sessionRepository.Sessions.Add(CreateSession(FocusMode.Focus, 25, DateTime.Today.AddHours(9)));
+        var viewModel = CreateViewModel(
+            sessionRepository: sessionRepository,
+            onConfirmDelete: _ => false);
+        await viewModel.LoadAsync();
+
+        await ExecuteAsync(viewModel.SessionLog.ClearSessionsCommand);
+
+        Assert.Single(viewModel.SessionLog.Sessions);
+        Assert.Single(sessionRepository.Sessions);
     }
 
     [Fact]

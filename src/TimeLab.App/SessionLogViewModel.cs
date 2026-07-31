@@ -18,6 +18,9 @@ public sealed class SessionLogViewModel : ViewModelBase
     private readonly SemaphoreSlim _mutationGate = new(1, 1);
     private int _pendingMutationCount;
     private string _todayStats = string.Empty;
+    private int _todayFocusCount;
+    private int _todayFocusMinutes;
+    private int _todayCompletedTaskCount;
 
     internal SessionLogViewModel(
         PomodoroService pomodoroService,
@@ -34,6 +37,10 @@ public sealed class SessionLogViewModel : ViewModelBase
             p => RunMutationAsync(() => DeleteSessionAsync((Guid)p!)),
             HandleCommandException,
             _ => CanDeleteSession());
+        ClearSessionsCommand = new AsyncRelayCommand(
+            _ => RunMutationAsync(ClearSessionsAsync),
+            HandleCommandException,
+            _ => CanDeleteSession() && Sessions.Count > 0);
 
         Sessions.CollectionChanged += HandleCollectionChanged;
         _taskList.Tasks.CollectionChanged += HandleCollectionChanged;
@@ -51,7 +58,26 @@ public sealed class SessionLogViewModel : ViewModelBase
         private set => SetProperty(ref _todayStats, value);
     }
 
+    public int TodayFocusCount
+    {
+        get => _todayFocusCount;
+        private set => SetProperty(ref _todayFocusCount, value);
+    }
+
+    public int TodayFocusMinutes
+    {
+        get => _todayFocusMinutes;
+        private set => SetProperty(ref _todayFocusMinutes, value);
+    }
+
+    public int TodayCompletedTaskCount
+    {
+        get => _todayCompletedTaskCount;
+        private set => SetProperty(ref _todayCompletedTaskCount, value);
+    }
+
     public AsyncRelayCommand DeleteSessionCommand { get; }
+    public AsyncRelayCommand ClearSessionsCommand { get; }
 
     internal async Task LoadAsync()
     {
@@ -82,6 +108,9 @@ public sealed class SessionLogViewModel : ViewModelBase
         var count = sessions.Count;
         var totalMinutes = (int)sessions.Sum(session => session.Duration.TotalMinutes);
         var tasksDone = _taskList.Tasks.Count(task => task.CompletedAt?.Date == today);
+        TodayFocusCount = count;
+        TodayFocusMinutes = totalMinutes;
+        TodayCompletedTaskCount = tasksDone;
         TodayStats = $"今日 {count} 次 · {totalMinutes} 分钟 · {tasksDone} 个任务";
     }
 
@@ -94,6 +123,22 @@ public sealed class SessionLogViewModel : ViewModelBase
         var session = Sessions.FirstOrDefault(item => item.Id == id);
         if (session is not null)
             Sessions.Remove(session);
+    }
+
+    private async Task ClearSessionsAsync()
+    {
+        var sessions = Sessions.ToArray();
+        if (sessions.Length == 0
+            || !_confirmDelete($"确定清空全部 {sessions.Length} 条专注记录吗？此操作无法撤销。"))
+            return;
+
+        foreach (var session in sessions)
+        {
+            await _pomodoroService.DeleteSessionAsync(session.Id);
+            Sessions.Remove(session);
+        }
+
+        NotificationRequested?.Invoke("已清空全部专注记录", false);
     }
 
     private bool CanDeleteSession() =>
@@ -119,12 +164,16 @@ public sealed class SessionLogViewModel : ViewModelBase
         }
     }
 
-    private void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+    private void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
         RefreshTodayStats();
+        ClearSessionsCommand.RaiseCanExecuteChanged();
+    }
 
     private void NotifyCommandStatesChanged()
     {
         DeleteSessionCommand.RaiseCanExecuteChanged();
+        ClearSessionsCommand.RaiseCanExecuteChanged();
         CommandManager.InvalidateRequerySuggested();
     }
 

@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace TimeLab.App;
@@ -16,6 +17,7 @@ public sealed class MainViewModel : ViewModelBase
     private bool _isNotificationVisible;
     private bool _isErrorNotification;
     private bool _isDarkMode;
+    private bool _isSessionLogViewVisible;
     private bool _isExitPrepared;
 
     internal MainViewModel(
@@ -32,6 +34,8 @@ public sealed class MainViewModel : ViewModelBase
         _interactionState = interactionState;
         _onBalloon = onBalloon;
         _onToggleDark = onToggleDark;
+        ShowSessionLogCommand = new RelayCommand(_ => IsSessionLogViewVisible = true);
+        BackToWorkspaceCommand = new RelayCommand(_ => IsSessionLogViewVisible = false);
 
         TaskList.NotificationRequested += ShowNotification;
         Timer.NotificationRequested += ShowNotification;
@@ -41,6 +45,14 @@ public sealed class MainViewModel : ViewModelBase
     public TaskListViewModel TaskList { get; }
     public TimerViewModel Timer { get; }
     public SessionLogViewModel SessionLog { get; }
+    public ICommand ShowSessionLogCommand { get; }
+    public ICommand BackToWorkspaceCommand { get; }
+
+    public bool IsSessionLogViewVisible
+    {
+        get => _isSessionLogViewVisible;
+        private set => SetProperty(ref _isSessionLogViewVisible, value);
+    }
 
     public string NotificationMessage
     {
